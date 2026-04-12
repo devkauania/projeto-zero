@@ -1,0 +1,41 @@
+# Handoff Template (.agents/claude-handoff.md)
+
+**Timestamp:** [YYYY-MM-DD HH:MM]
+**Task:** [ID or name]
+
+## 1. Summary
+[One paragraph: what was implemented and why.]
+
+## 2. Files Changed/Created
+- `path/to/file` — one-line reason
+
+## 3. Schema / DB Changes
+- [ ] None
+- [ ] Changes: [new tables, columns, relations]
+
+## 4. RPC / Server Actions Added
+- [Hono routes created/modified]
+
+## 5. Validations Executed (Production Contract proof)
+List every command you ran, its result, and what it proves. Include at least:
+- Lint (official script): `<command>` → result
+- Build (official script): `<command>` → result
+- Tests (official script or framework): `<command>` → result
+- E2E against built artifact: `<command>` → result + artifact inspection
+
+## 6. Errors Made and Fixed This Session
+Honest list of mistakes caught mid-session and how they were corrected. Do
+NOT hide iterations — the next agent needs to know what tripped you up.
+
+## 7. Known Limitations / Out of Scope
+What you could not close, what the next agent must NOT reopen, and what the
+Auditor should stress-test.
+
+## 8. Auditor Test Instructions
+1. [Step 1]
+2. [Step 2]
+3. [Expected behavior]
+
+## 9. Fractional Progress (Self-Handoff)
+- **Done so far:** [brief]
+- **Remaining (next session):** [brief]

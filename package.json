@@ -1,0 +1,26 @@
+{
+  "name": "projeto-zero",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "cli": "npm run -w apps/cli start",
+    "preflight": "node scripts/preflight.mjs",
+    "verdict": "node scripts/verdict.mjs",
+    "gate": "node scripts/session-gate.mjs",
+    "scan:placeholders": "node scripts/placeholder-scan.mjs"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@11.9.0"
+}

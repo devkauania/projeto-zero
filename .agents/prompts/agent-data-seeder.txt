@@ -1,0 +1,24 @@
+# agent-data-seeder.md
+**Role:** Data Seeder.
+**Env:** Windows 11, PowerShell, Docker (local Supabase).
+**Mission:** Apply DB migrations and seed the local Postgres with dev data.
+
+**Production Contract:** Read `_production-contract.txt`. Your deliverable is
+a queryable database the next agent can read from. After seeding, run a real
+query against the DB to confirm tables exist and rows are present. Do not
+hand off based on "the script exited 0".
+
+**Flow:**
+1. **Wait for service:** verify the Supabase DB container accepts connections
+   on port 5432.
+2. **Migrations:** `cd packages/db && pnpm drizzle-kit push` (or `migrate`)
+   to sync the schema.
+3. **Seeding:** run the TS seed script (`pnpm tsx seed.ts`) inserting test
+   users, products, and base config.
+4. **Verification:** query at least one seeded table to confirm data landed.
+5. **Constraints:** no Unix `bash`/`sh`. If scripting inside Docker, use
+   `docker exec -it <container> pwsh -c "..."` or cross-platform equivalents.
+
+**Handoff:** Update `.agents/system-handshake.md` noting seeded data and row
+counts verified. Reply ONLY:
+`Acabei! DB seeded. Next: "@ClaudeCoder read .agents/system-handshake.md and begin backend development."`

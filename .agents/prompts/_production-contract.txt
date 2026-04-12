@@ -1,0 +1,113 @@
+# Production Contract (applies to every agent in this pipeline)
+
+Your deliverable must be production-ready and validated end-to-end through the
+real runtime path — not isolated unit checks, not smoke tests that only prove
+things to yourself.
+
+> **Preamble — Session 12 amendment.** Rules R9–R16 were added in Session 12
+> (@ProcessHardener) in direct response to the Session 11 post-mortem. The
+> Session 11 honest-errors log lives in `.agents/release-engineering.md §8`
+> and documents how a session can ship green tests while still leaving
+> declared-but-missing files, placeholder URLs, code-review-only error-path
+> "audits", and silently scoped-down cross-platform coverage. Rules R9–R16
+> exist to make each of those failure modes mechanically impossible: every
+> new rule is wired to a script under `scripts/` that will fail the gate
+> instead of relying on the agent's self-assessment.
+
+Hard rules:
+1. No dead code. Every field, function, or config you add must be wired into
+   the real pipeline the user actually invokes. If you add a type field, the
+   code that populates it and the code that consumes it must both exist and
+   be exercised.
+2. No work left for the next agent. If the next agent in the pipeline has to
+   redo or complete your task because you stopped at "technically compiles",
+   you failed. Scope is measured by pipeline integrity, not file count.
+3. Run official scripts before handoff: `lint`, `build`, and any `test`
+   script declared in package.json / turbo.json. Never substitute with ad-hoc
+   commands unless the official scripts don't exist.
+4. Validate end-to-end against the built artifact (e.g. `node dist/...`),
+   not against source imports, unless the command is genuinely non-runnable
+   without a TTY — in which case extract pure testable functions and exercise
+   those with the same production code path.
+5. Test error paths and edge cases you introduced (missing config, empty
+   input, paths with spaces on Windows, etc.).
+6. Handoff must be honest: document errors you made and fixed during the
+   session, gaps you could not close, and limitations the next agent needs
+   to know. Do not write handoffs that only describe the happy path.
+7. Never add dependencies outside the declared scope. Reuse existing helpers.
+8. If you break scope or cannot meet the contract, stop and report instead
+   of declaring done.
+
+R9.  EXECUTE, NEVER CONFIRM. The word "confirm" is banned from session
+     prompts. If a prompt asks you to "verify X", your deliverable is
+     either (a) a test file that asserts X and is run green in CI, or
+     (b) a paste of the literal command + output that proves X. Reading
+     code and reasoning about it is NOT verification.
+
+R10. SELF-GRADING TABLE. Before writing any verdict, every session handoff
+     must contain a markdown table with one row per numbered prompt bullet,
+     columns = [bullet, status, evidence path]. status ∈ {DONE, PARTIAL,
+     SKIPPED, BLOCKED}. Any row that is not DONE blocks a PRODUCTION-READY
+     verdict — the verdict field is computed mechanically from the table,
+     not chosen by the agent.
+
+R11. NO SELF-REVIEW. An implementation session may never validate its own
+     output. Every implementation session is followed by a VALIDATION
+     SESSION run on a different model family (Claude implementation →
+     Gemini validator; Gemini implementation → Claude validator). The
+     validation session is read-only except for its own validation report
+     under `.agents/validations/`. A roadmap row is only marked [x] when
+     both the implementation AND its validation report are green.
+
+R12. ASK, DON'T PLACEHOLDER. If any URL, credential, name, version, or
+     scope decision is unknown, STOP and write a single consolidated
+     question in `.agents/<session>-blockers.md`. Never invent a
+     plausible-looking placeholder. Never defer with a TODO. The gate
+     scripts will fail any commit that contains strings matching the
+     placeholder regex.
+
+R13. ACCEPTANCE-TEST-FIRST FOR NON-TRIVIAL SESSIONS. Any session whose
+     deliverable is "make X work" must be split: session N writes a failing
+     acceptance test that encodes "X works", session N+1 makes the test
+     pass. Done is defined by the test going green, not by narrative.
+
+R14. MECHANICAL VERDICTS ONLY. The strings "PRODUCTION-READY" / "NOT-READY"
+     may ONLY appear in handoffs as copy-pasted output from
+     `scripts/verdict.mjs`. Typing them by hand is forbidden.
+
+R15. GATE BEFORE HANDOFF. Every session MUST run
+     `node scripts/session-gate.mjs` as its last action before writing the
+     handoff, and paste the full output into a `## Gate Transcript` section
+     of the handoff. If the gate exits non-zero, the handoff cannot claim
+     the session is done.
+
+R16. LOOK FOR FRIENDS, NOT JUST ENEMIES. When reviewing any file list
+     (npm pack, git status, tree output), you must explicitly verify that
+     each file that SHOULD be present IS present — not only that unwanted
+     files are absent. The gate scripts enforce this for package `files[]`.
+
+R17. STRICT SESSION ALTERNATION + NO-SKIP NEXT-PROMPT.
+     (a) The roadmap MUST alternate implementation ↔ validation:
+         every session N (implementation, on Claude Code CLI) is
+         immediately followed by session Nv (validation, on Antigravity
+         AI / Gemini), and every Nv is followed by the next
+         implementation session N+1 (back on Claude). R13 splits
+         (e.g. 14a / 14av / 14b / 14bv) follow the same alternation
+         at the sub-letter level: 14a → 14av → 14b → 14bv. There is
+         no such thing as two implementation sessions in a row, nor
+         two validation sessions in a row.
+     (b) Whenever a session is asked to produce "the prompt for the
+         next session", "the next session prompt", or any equivalent,
+         the next session is defined MECHANICALLY as the FIRST roadmap
+         row whose checkbox is `[ ]` or `[~]`, read top-to-bottom,
+         with no skipping permitted. The session producing the prompt
+         MUST quote that roadmap row verbatim in its reply BEFORE
+         writing the new prompt, so the choice is auditable.
+     (c) Model assignment is mechanical, not negotiable: if the next
+         row is an implementation row, the prompt targets Claude Code
+         CLI; if it is a validation row (suffix `v` or `av`/`bv`),
+         the prompt targets Antigravity AI / Gemini. Picking the
+         other family is a contract violation under R11.
+     (d) A session whose handoff was followed by a "next session
+         prompt" that skipped a row is itself in violation of R17
+         and must be reopened.

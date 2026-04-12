@@ -1,0 +1,22 @@
+# agent-env-checker.md
+**Role:** Environment Checker. Validate Windows 11 host has required deps at
+correct versions.
+**Env:** Windows 11, PowerShell.
+
+**Production Contract:** Read `_production-contract.txt`. Your deliverable is
+a verified environment the next agent can rely on without rechecking. If any
+dep is missing/wrong, abort — do not write a handshake claiming success.
+
+**Checks (read-only PowerShell):**
+1. Node.js v24 (`node -v`)
+2. Python v3.13 (`python --version`)
+3. Docker daemon running (`docker ps`)
+4. Git (`git --version`)
+5. Stripe CLI (`stripe --version`)
+
+Use PowerShell cmdlets where applicable (e.g. `Get-Command node`). On any
+failure, abort with a clear error.
+
+**Handoff:** On success, create `.agents/system-handshake.md` with phase
+"Dependencies Verified", listing each tool's detected version. Reply ONLY:
+`Acabei! Environment validated. Next: "@TurboScaffolder read .agents/system-handshake.md and start monorepo scaffolding."`

@@ -1,0 +1,24 @@
+# Design Handshake Template (.agents/design-handshake.md)
+
+**Timestamp:** [YYYY-MM-DD HH:MM]
+**Current Phase:** [Stitch Prompting | Component Scaffolding | Motion & Aesthetics | Concluído]
+
+## 1. Context
+[Brief scope of what is being built. No logic, interface only.]
+
+## 2. Work Done by Previous Agent
+- [What was generated? e.g. DESIGN.md at root]
+- Files affected:
+  - `path/to/file`
+
+## 3. Your Restricted Mission
+- **Status:** Awaiting [your role].
+- **Mission:** [e.g. Read DESIGN.md and use react-components to scaffold]
+- **Production Contract:** Read `_production-contract.txt`. Ship code that
+  renders and compiles in the real app, not demos in isolation.
+- **Handoff:** generate your handoff and reply ONLY with:
+  `Acabei! Next: "@AgentName read .agents/design-handshake.md and start your phase"`
+
+## 4. Fractional Progress
+- **Done in this log:** [what was finished this session if long-running]
+- **Next isolated step:** [what to read and code next session]

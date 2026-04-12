@@ -1,0 +1,13 @@
+# Allowlist for placeholder-scan.mjs. Format: one regex per line (matched
+# case-insensitively, applied to whole lines). Every regex MUST be
+# immediately preceded by a comment line (starting with #) explaining why
+# the exception exists. Blank lines are allowed.
+
+# @clack/prompts exposes a `placeholder` field on p.text() options — this
+# is a library API name, not a placeholder VALUE. Matches lines like
+#   placeholder: "./output",
+placeholder:\s*["']
+
+# Tests and source occasionally reference the literal word "placeholder"
+# in comments describing the "(none)" rendering for empty fields.
+"\(none\)" placeholder

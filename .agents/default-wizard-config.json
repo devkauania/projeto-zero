@@ -1,0 +1,70 @@
+{
+  "projectName": "antigravity-wizard",
+  "version": "0.1.0",
+  "description": "Default seed config for the Antigravity CLI wizard",
+  "agents": ["coder", "designer", "auditor", "mcp"],
+  "includeTemplates": true,
+  "mcpConnectors": {
+    "supabase": {
+      "id": "supabase",
+      "label": "Supabase",
+      "description": "Database, auth, and edge functions via Supabase MCP",
+      "tools": [
+        "execute_sql",
+        "apply_migration",
+        "list_tables",
+        "deploy_edge_function"
+      ],
+      "requiredFor": ["coder"]
+    },
+    "vercel": {
+      "id": "vercel",
+      "label": "Vercel",
+      "description": "Deployment and preview via Vercel MCP",
+      "tools": [
+        "deploy_to_vercel",
+        "list_deployments",
+        "get_deployment_build_logs"
+      ],
+      "requiredFor": []
+    },
+    "stripe": {
+      "id": "stripe",
+      "label": "Stripe",
+      "description": "Payment integration via Stripe MCP",
+      "tools": [
+        "list_products",
+        "create_product",
+        "create_price",
+        "create_payment_link"
+      ],
+      "requiredFor": []
+    },
+    "figma": {
+      "id": "figma",
+      "label": "Figma",
+      "description": "Design tokens and components via Figma MCP",
+      "tools": [
+        "get_design_context",
+        "get_screenshot",
+        "search_design_system"
+      ],
+      "requiredFor": ["designer"]
+    },
+    "netlify": {
+      "id": "netlify",
+      "label": "Netlify",
+      "description": "Deploy and project management via Netlify MCP",
+      "tools": [
+        "netlify-deploy-services-reader",
+        "netlify-project-services-reader"
+      ],
+      "requiredFor": []
+    }
+  },
+  "defaults": {
+    "targetDir": ".",
+    "scaffoldAgentsDir": true,
+    "scaffoldPromptsDir": true
+  }
+}

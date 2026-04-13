@@ -302,3 +302,53 @@ describe("init recovers gracefully when ANTIGRAVITY_CONFIG_DIR is read-only", ()
     assertNoStackTrace(r.stderr);
   });
 });
+
+// ---------------------------------------------------------------------------
+// (d) Corrupted config store does not crash init
+// ---------------------------------------------------------------------------
+
+describe("init degrades gracefully with corrupted config store", () => {
+  let cfgDir: string;
+
+  beforeEach(async () => {
+    cfgDir = await fs.mkdtemp(path.join(os.tmpdir(), "pz-corrupt-cfg-"));
+    // Create a valid config first to discover Conf's file layout,
+    // then corrupt all JSON files in the directory.
+    const prev = process.env.ANTIGRAVITY_CONFIG_DIR;
+    process.env.ANTIGRAVITY_CONFIG_DIR = cfgDir;
+    try {
+      saveConfig({
+        projectName: "x",
+        agents: ["coder"],
+        includeTemplates: false,
+      });
+    } finally {
+      if (prev === undefined) delete process.env.ANTIGRAVITY_CONFIG_DIR;
+      else process.env.ANTIGRAVITY_CONFIG_DIR = prev;
+    }
+    const files = await fs.readdir(cfgDir);
+    for (const f of files) {
+      if (f.endsWith(".json")) {
+        await fs.writeFile(path.join(cfgDir, f), "{malformed");
+      }
+    }
+  });
+
+  afterEach(async () => {
+    await fs.rm(cfgDir, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it("init handles corrupted config store without crashing", { timeout: 15000 }, async () => {
+    const r = await runCli({
+      args: ["init"],
+      env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
+      stdinChunks: ["test-proj\r", "coder\r", "y\r"],
+      timeoutMs: 10000,
+    });
+    // init should either succeed (Conf resets corrupt store) or exit 1
+    // with a friendly error. Either way: no raw stack trace, and the
+    // process terminates (not killed by signal).
+    assertNoStackTrace(r.stderr);
+    expect(r.signal).toBeNull();
+  });
+});

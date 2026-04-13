@@ -86,6 +86,12 @@ describe("readJsonFile / writeJsonFile", () => {
   it("returns null for a missing JSON file", async () => {
     expect(await readJsonFile(path.join(tmp, "missing.json"))).toBeNull();
   });
+
+  it("returns null for corrupted (malformed) JSON content", async () => {
+    const file = path.join(tmp, "corrupt.json");
+    await fs.writeFile(file, "{malformed");
+    expect(await readJsonFile(file)).toBeNull();
+  });
 });
 
 describe("findSeedConfigPath", () => {

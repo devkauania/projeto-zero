@@ -20,7 +20,7 @@ function detectSessionNumber() {
   const content = readFileSync(ROADMAP, "utf8");
   // Find the highest "Sessão <N>" mentioned. Validation rows use <N>v so
   // strip any trailing letter.
-  const nums = [...content.matchAll(/Sess(?:ão|ao)\s+(\d+)/g)].map((m) => Number(m[1]));
+  const nums = [...content.matchAll(/Sess(?:ão|ao|ion)\s+(\d+)/g)].map((m) => Number(m[1]));
   if (nums.length === 0) return null;
   return Math.max(...nums);
 }

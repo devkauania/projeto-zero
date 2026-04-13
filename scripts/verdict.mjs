@@ -26,7 +26,11 @@ function main() {
 
   // Extract failing check names from the summary line: "preflight: FAILED (a, b)".
   const m = out.match(/preflight:\s*FAILED\s*\(([^)]*)\)/);
-  const failing = m ? m[1].trim() : "unknown";
+  if (!m) {
+    console.log("PARSE-ERROR: could not extract failure details from preflight output");
+    process.exit(2);
+  }
+  const failing = m[1].trim();
   console.log(`NOT-READY: ${failing}`);
   process.exit(1);
 }

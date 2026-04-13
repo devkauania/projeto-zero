@@ -4,7 +4,7 @@
 // When the CLI is installed globally, findSeedConfigPath() resolves the seed
 // relative to its compiled file location — no walk back to the monorepo root
 // is possible from `<npm-prefix>/lib/node_modules/@projeto-zero/cli/dist/...`.
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,4 +20,14 @@ if (!existsSync(src)) {
 }
 mkdirSync(destDir, { recursive: true });
 copyFileSync(src, dest);
+
+// Validate the copied file is valid JSON (M6: build must not pass with invalid seed)
+try {
+  JSON.parse(readFileSync(dest, "utf8"));
+} catch (err) {
+  console.error(`[copy-seed] copied file is not valid JSON: ${dest}`);
+  console.error(`[copy-seed] ${err.message}`);
+  process.exit(1);
+}
+
 console.log(`[copy-seed] ${src} -> ${dest}`);

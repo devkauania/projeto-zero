@@ -471,31 +471,41 @@ FASE DE PUBLICAÇÃO:
 
 ## Issue Tracking Matrix
 
-Cada issue do inventário mapeado para sua sessão de resolução:
+Cada issue do inventário mapeado para sua sessão de resolução.
 
-| Issue | Sessão | Status |
-|-------|--------|--------|
-| C1 Dependência circular | 14c #1 | PENDING |
-| C2 Artefato .tgz | 14c #2 | PENDING |
-| C3 Sem git | 14c #3 | PENDING |
-| C4 Build quebrado | 14c #13-14 | PENDING |
-| H1 CHANGELOG.md | 14c #7 | PENDING |
-| H2 readJsonFile crash | 14c #9, 14d #3-4 | PENDING |
-| H3 reset non-TTY | 14c #10, 14d #2 | PENDING |
-| H4 session-gate path sep | 14c #11 | PENDING |
-| H5 types field | 14c #8 | PENDING |
-| H6 .gitignore incompleto | 14c #4 | PENDING |
-| H7 placeholder-scan path | 14c #12 | PENDING |
-| M1 Dirs residuais | 14c #5 | PENDING |
-| M2 Arquivos .out | 14c #6 | PENDING |
-| M3 Test coverage gaps | 14d #1-4 | PENDING |
-| M4 gate português | 14e #1 | PENDING |
-| M5 verdict regex | 14e #2 | PENDING |
-| M6 copy-seed no validation | 14e #3 | PENDING |
-| L1 Versão 0.1.0 | 17 #1-2 | PENDING |
-| L2 Display slashes | — (cosmético, aceito) | WONTFIX |
-| L3 Sem rollback scaffold | — (design limitation, aceito) | WONTFIX |
-| L4 Walk-up limit 8 | — (edge case extremo, aceito) | WONTFIX |
-| L5 Git hooks | — (fora do escopo MVP) | DEFERRED |
-| L6 Session 11 sem R10 | — (histórico, pré-R10) | ACKNOWLEDGED |
-| L7 Session 11 verdict manual | — (histórico, pré-R14) | ACKNOWLEDGED |
+> **Atualizado:** 2026-04-13 (pós-Session 14d).
+> Issues C1-H7 e M1-M2 resolvidos por 14c. M3 resolvido por 14d.
+> Issues M7-M8 descobertos em 14b. L8-L11 descobertos em 14c/14d.
+
+| Issue | Sessão | Status | Evidência |
+|-------|--------|--------|-----------|
+| C1 Dependência circular | 14c #1 | DONE | `grep 'projeto-zero-cli-0.1.0.tgz' apps/cli/package.json` → 0 matches |
+| C2 Artefato .tgz | 14c #2 | DONE | `ls apps/cli/*.tgz` → No such file |
+| C3 Sem git | 14c #3 | DONE | `git log --oneline` → commits existem |
+| C4 Build quebrado | 14c #13-14 | DONE | `npm run build` exit 0 |
+| H1 CHANGELOG.md | 14c #7 | DONE | `head -5 CHANGELOG.md` → versão presente |
+| H2 readJsonFile crash | 14c #9, 14d #3 | DONE | try/catch em fs-utils.ts + teste de JSON corrupto green |
+| H3 reset non-TTY | 14c #10, 14d #2 | DONE | guard isTTY em reset.ts + 3 testes non-TTY green |
+| H4 session-gate path sep | 14c #11 | DONE | `l.replace(/\\\\/g, "/")` em session-gate.mjs |
+| H5 types field | 14c #8 | DONE | `grep '"types"' apps/cli/package.json` → presente |
+| H6 .gitignore incompleto | 14c #4 | DONE | `grep 'tgz' .gitignore` → presente |
+| H7 placeholder-scan path | 14c #12 | DONE | normalização cross-platform em placeholder-scan.mjs |
+| M1 Dirs residuais | 14c #5 | DONE | dirs deletados |
+| M2 Arquivos .out | 14c #6 | DONE | arquivos deletados |
+| M3 Test coverage gaps | 14d #1-4 | DONE | 48 testes passando (40 existentes + 8 novos) |
+| M4 gate português | 14e #1 | PENDING | — |
+| M5 verdict regex | 14e #2 | PENDING | — |
+| M6 copy-seed no validation | 14e #3 | PENDING | — |
+| M7 README sem doc non-TTY init seam | 15 | PENDING | `runNonInteractiveInit` line format (3 linhas: name, agents, y/n) não documentado. Descoberto em 14b §7. |
+| M8 SIGINT trap verificação POSIX | 15 | PENDING | `installSigintTrap()` só verificado em Windows via testes. POSIX manual check pendente. Descoberto em 14b §7. |
+| L1 Versão 0.1.0 | 17 #1-2 | PENDING | — |
+| L2 Display slashes | — (cosmético, aceito) | WONTFIX | — |
+| L3 Sem rollback scaffold | — (design limitation, aceito) | WONTFIX | — |
+| L4 Walk-up limit 8 | — (edge case extremo, aceito) | WONTFIX | — |
+| L5 Git hooks | — (fora do escopo MVP) | DEFERRED | — |
+| L6 Session 11 sem R10 | — (histórico, pré-R10) | ACKNOWLEDGED | — |
+| L7 Session 11 verdict manual | — (histórico, pré-R14) | ACKNOWLEDGED | — |
+| L8 session-gate detectSessionNumber() acha sessão mais alta (17) | 14e (parcial, via M4) | ACCEPTED | Não quebra funcionalidade — findHandoff() localiza handoff correto via grep. Melhoria cosmética. Descoberto em 14c §7. |
+| L9 Reset TTY confirmation path não testável via spawn | — (limitação arquitetural) | ACCEPTED | Non-TTY guard dispara antes de p.confirm quando stdin é pipe. Exigiria pseudo-TTY. Descoberto em 14d §7. |
+| L10 Seed config corruption só testado em nível unitário | — (limitação arquitetural) | ACCEPTED | findSeedConfigPath resolve relativo a dist/index.js — não pode ser overridden sem mudar código de produção. readJsonFile try/catch coberto em fs-utils.test.ts. Descoberto em 14d §7. |
+| L11 session-gate acha handoff 14a primeiro (alfabético) | 14e (parcial, via M4) | ACCEPTED | Gate busca primeiro `.agents/handoffs/session-14*` alfabeticamente. Funcional mas confuso no transcript. Descoberto em 14d §7. |

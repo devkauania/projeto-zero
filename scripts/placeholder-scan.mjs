@@ -27,6 +27,8 @@ const IGNORED_DIR_PREFIXES = [
   join(".agents", "prompts"),
   // Validation reports — read-only narrative about other sessions.
   join(".agents", "validations"),
+  // Session handoffs — narrative documents about past sessions.
+  join(".agents", "handoffs"),
 ];
 
 const IGNORED_FILES = new Set([
@@ -41,23 +43,10 @@ const IGNORED_FILES = new Set([
   join("scripts", "verdict.mjs"),
   // The allowlist documents allowed exceptions.
   join("scripts", "placeholder-allowlist.txt"),
-  // Narrative handoffs discuss these concepts (that is their job).
-  // Handoffs must still be reviewed by humans; the gate enforces the
-  // shipping artifacts, not the prose around them.
+  // Narrative project-management docs in .agents/ root.
   join(".agents", "PROJECT_ROADMAP.md"),
-  join(".agents", "process-hardening.md"),
-  join(".agents", "release-engineering.md"),
-  join(".agents", "ui-completion.md"),
-  join(".agents", "claude-handoff.md"),
-  join(".agents", "design-handshake.md"),
-  join(".agents", "final-audit.md"),
-  join(".agents", "cross-platform-report.md"),
-  join(".agents", "publish-log.md"),
-  join(".agents", "pipeline-routing-plan.md"),
-  join(".agents", "session-router-blockers.md"),
   join(".agents", "antigravity-taxonomy.md"),
   join(".agents", "plano-sessoes-restantes.md"),
-  join(".agents", "session-14c-build-remediation.md"),
   "CHANGELOG.md",
   // Root package.json references the npm script name "scan:placeholders".
   "package.json",

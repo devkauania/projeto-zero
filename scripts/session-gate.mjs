@@ -26,20 +26,22 @@ function detectSessionNumber() {
 }
 
 function findHandoff(sessionN) {
-  const dir = join(REPO_ROOT, ".agents");
-  if (!existsSync(dir)) return null;
-  // Allow both naming patterns: session-<N>-*.md or any *.md whose first
-  // heading references the session. The roadmap-declared handoffs use
-  // descriptive names (e.g. process-hardening.md), so a simple grep
-  // over .agents/*.md for "Session <N>" is the pragmatic match.
+  // Search both .agents/ and .agents/handoffs/ for session handoffs.
+  const dirs = [
+    join(REPO_ROOT, ".agents"),
+    join(REPO_ROOT, ".agents", "handoffs"),
+  ];
   const candidates = [];
-  for (const f of readdirSync(dir)) {
-    if (!f.endsWith(".md")) continue;
-    const full = join(dir, f);
-    const head = readFileSync(full, "utf8").slice(0, 400);
-    const re = new RegExp(`Session\\s+${sessionN}\\b`, "i");
-    if (re.test(head) || f === `session-${sessionN}.md` || f.startsWith(`session-${sessionN}-`)) {
-      candidates.push(full);
+  const re = new RegExp(`Session\\s+${sessionN}\\b`, "i");
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith(".md")) continue;
+      const full = join(dir, f);
+      const head = readFileSync(full, "utf8").slice(0, 400);
+      if (re.test(head) || f === `session-${sessionN}.md` || f.startsWith(`session-${sessionN}-`)) {
+        candidates.push(full);
+      }
     }
   }
   return candidates[0] || null;
@@ -111,9 +113,9 @@ function checkGitClean(sessionN) {
     log("PASS", "git-clean", "working tree clean");
     return true;
   }
-  // Allow handoff + roadmap dirty.
+  // Allow handoff + roadmap dirty (handoffs live in .agents/handoffs/).
   const allowedRe = new RegExp(
-    `^[ MARCU?]{1,2}\\s+(\\.agents/PROJECT_ROADMAP\\.md|\\.agents/.*session.*\\.md|\\.agents/process-hardening\\.md)$`,
+    `^[ MARCU?]{1,2}\\s+(\\.agents/PROJECT_ROADMAP\\.md|\\.agents/handoffs/.*\\.md|\\.agents/.*session.*\\.md)$`,
     "i"
   );
   const unexpected = dirty.filter((l) => !allowedRe.test(l.replace(/\\/g, "/")));

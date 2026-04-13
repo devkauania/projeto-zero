@@ -79,7 +79,7 @@ MODIFICAR:
 
 CRIAR:
 - CHANGELOG.md (raiz)
-- .agents/session-14c-build-remediation.md (handoff)
+- .agents/handoffs/session-14c-build-remediation.md (handoff)
 
 DELETAR:
 - apps/cli/projeto-zero-cli-0.1.0.tgz
@@ -146,7 +146,7 @@ PROIBIDO TOCAR:
 CRIAR:
 - apps/cli/src/__tests__/generate-command.test.ts
 - apps/cli/src/__tests__/reset-command.test.ts
-- .agents/session-14d-test-hardener.md (handoff)
+- .agents/handoffs/session-14d-test-hardener.md (handoff)
 
 MODIFICAR:
 - apps/cli/src/__tests__/fs-utils.test.ts (adicionar teste de JSON corrupto)
@@ -202,7 +202,7 @@ MODIFICAR:
 - apps/cli/scripts/copy-seed.mjs (JSON validation)
 
 CRIAR:
-- .agents/session-14e-gate-hardener.md (handoff)
+- .agents/handoffs/session-14e-gate-hardener.md (handoff)
 
 PROIBIDO TOCAR:
 - apps/cli/src/** (nenhum código de produção)

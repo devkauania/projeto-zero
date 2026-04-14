@@ -122,4 +122,23 @@ Prompt file: `.agents/prompts/sessions/milestone-c-prompt.md`
 
 ## Session Notes
 
-_(O agente pode adicionar notas aqui durante a sessao)_
+### 2026-04-14 — Dispatch halted by Compliance Pre-Check
+
+Session 17 did not execute. Three independent blockers were surfaced before
+any mutation:
+
+1. **R17 no-skip violation.** First `[ ]` row top-to-bottom in
+   `PROJECT_ROADMAP.md` is **Milestone B**, not Session 17. Session 17 is
+   explicitly gated on Milestone B returning GO.
+2. **R12 missing artifact.** The Pre-Check instructs to read
+   `.agents/validations/milestone-b-validation.md`. File does not exist —
+   Milestone B never ran.
+3. **Tier mismatch.** Prompt declares Haiku 4.6 / Tier Low with
+   "NAO escalar"; dispatch arrived at Opus 4.6 / Tier High.
+
+No files modified. No commits. No tags. No `npm publish --dry-run`. No
+`npm publish`.
+
+Full analysis and decision options written to
+`.agents/session-17-blockers.md` per R12. The publish gate stays closed
+until the human decides how to unblock.

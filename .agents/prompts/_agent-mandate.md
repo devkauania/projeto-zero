@@ -44,41 +44,55 @@ etapas de pré-trabalho mandatórias.
 
 ---
 
-## 2. Mitigação R11 — Validação Adversária Cross-Family
+## 2. Mitigação R11 — Validação Adversária (policy-aware)
 
-### Para sessões de IMPLEMENTAÇÃO
+Esta seção é governada por `.agents/vendor-policy.json` (ver R11 no
+`_production-contract.txt`). As regras abaixo se aplicam conforme a
+política declarada.
 
-Seu output será validado por uma família de modelo **diferente** em um
-Milestone de verificação (ver `antigravity-taxonomy.md` §4). Você NÃO
-deve auto-validar. Sua responsabilidade termina no handoff + gate
-transcript.
+### Para sessões de IMPLEMENTAÇÃO (qualquer policy)
 
-### Para MILESTONE REVIEWERS (Gemini 3.1 Pro)
+Seu output será validado por uma sessão separada (Milestone de
+verificação). Você NÃO deve auto-validar. Sua responsabilidade termina
+no handoff + gate transcript.
 
-Você está revisando output de uma família de modelo diferente (ou, no
-caso documentado da exceção R11 para Session 16, da mesma família com
-adversarial checklist obrigatória).
+- Sob `policy: cross-family`: o validador será de uma família de
+  modelo DIFERENTE.
+- Sob `policy: single-family`: o validador será da MESMA família, mas
+  SEMPRE uma sessão separada (nunca inline). A Adversarial Checklist
+  será obrigatória.
 
-Regras inegociáveis:
+### Para MILESTONE REVIEWERS
+
+Regras inegociáveis (ambas policies):
 - **EXECUTAR** evidência conforme regra R9 — rodar o comando, colar o
   output. Ler código e raciocinar sobre ele NÃO é verificação.
 - **NÃO confiar em narrativa** — toda claim no Self-Grading Table deve
   ser verificada independentemente.
 
-### Adversarial Checklist (para revisões same-family)
+### Adversarial Checklist
 
-Quando a implementação e a validação são da mesma família de modelo
-(ex: Gemini Base → Gemini Specialist), o reviewer DEVE executar estes
-checks adicionais:
+- Sob `policy: cross-family`: a checklist é OBRIGATÓRIA apenas para
+  rows same-family documentadas como EXCEPTION.
+- Sob `policy: single-family`: a checklist é **OBRIGATÓRIA para toda
+  review session** (substitui separação cross-family como defesa
+  primária anti-gaming).
 
-1. Para cada teste descrito como "executado", verificar se o output
-   literal foi colado (não apenas "all tests pass").
-2. Para cada arquivo descrito como "criado", verificar existência no
-   disco via `ls` ou `cat`.
-3. Buscar o padrão "technically compiles" — claims de completude sem
-   evidência de execução E2E.
-4. Verificar se cross-platform claims incluem output de CADA plataforma
-   individualmente (não generalizações como "works on all platforms").
+Os 5 checks (definidos em `antigravity-taxonomy.md` §4):
+
+1. **Evidence Literality** — Para cada teste descrito como "executado",
+   verificar se o output literal foi colado (não apenas "all tests
+   pass").
+2. **File Existence** — Para cada arquivo descrito como "criado",
+   verificar existência no disco via `ls` ou `cat`.
+3. **Anti-"Technically Compiles"** — Buscar o padrão "technically
+   compiles" — claims de completude sem evidência de execução E2E.
+4. **Per-Platform Output** — Verificar se cross-platform claims incluem
+   output de CADA plataforma individualmente (não generalizações como
+   "works on all platforms").
+5. **Spec-by-Spec Diff** — Verificar que cada requirement em
+   `project-specs.md` tem um PASS com evidência, não apenas um
+   checkmark narrativo.
 
 ---
 

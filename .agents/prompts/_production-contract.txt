@@ -53,18 +53,44 @@ R10. SELF-GRADING TABLE. Before writing any verdict, every session handoff
 
 R11. NO SELF-REVIEW. An implementation session may never validate its own
      output. Every implementation session is followed by a VALIDATION
-     SESSION run on a different model family (Claude implementation →
-     Gemini validator; Gemini implementation → Claude validator). The
-     validation session is read-only except for its own validation report
-     under `.agents/validations/`. A roadmap row is only marked [x] when
-     both the implementation AND its validation report are green.
+     SESSION. The validation session is read-only except for its own
+     validation report under `.agents/validations/`. A roadmap row is only
+     marked [x] when both the implementation AND its validation report are
+     green.
+
+     The validator's MODEL FAMILY is governed by `.agents/vendor-policy.json`:
+
+     - Under `policy: cross-family` (original R11 default): the validator
+       MUST run on a different model family than the implementation (Claude
+       implementation → Gemini validator; Gemini implementation → Claude
+       validator).
+
+     - Under `policy: single-family`: the validator runs on the SAME family
+       as the implementation. Same-family review is NOT an exception — it
+       is the declared operating mode. The Adversarial Checklist in
+       `antigravity-taxonomy.md` §4 is MANDATORY on every review session
+       and replaces cross-family separation as the primary anti-gaming
+       defense. `adversarialChecklistMandatory: true` in the policy file
+       is REQUIRED for single-family.
+
+     If `.agents/vendor-policy.json` does not exist, `cross-family` is
+     assumed (backwards-compatible default). Regardless of policy, the
+     validator session must be a SEPARATE dispatch from the implementation
+     session — an implementation session never self-validates inline.
 
 R12. ASK, DON'T PLACEHOLDER. If any URL, credential, name, version, or
      scope decision is unknown, STOP and write a single consolidated
-     question in `.agents/<session>-blockers.md`. Never invent a
-     plausible-looking placeholder. Never defer with a TODO. The gate
+     question in `.agents/handoffs/<session>-blockers.md`. Never invent
+     a plausible-looking placeholder. Never defer with a TODO. The gate
      scripts will fail any commit that contains strings matching the
      placeholder regex.
+
+     Why `.agents/handoffs/` specifically: `scripts/placeholder-scan.mjs`
+     treats `.agents/handoffs/**` as narrative-exempt. Writing blocker
+     files at `.agents/` root triggers a self-inflicted scan FAIL
+     because the word "placeholder" legitimately appears when the
+     blocker references this rule. Always write blockers to the
+     handoffs/ subdirectory.
 
 R13. ACCEPTANCE-TEST-FIRST FOR NON-TRIVIAL SESSIONS. Any session whose
      deliverable is "make X work" must be split: session N writes a failing
@@ -103,11 +129,21 @@ R17. STRICT SESSION ALTERNATION + NO-SKIP NEXT-PROMPT.
          with no skipping permitted. The session producing the prompt
          MUST quote that roadmap row verbatim in its reply BEFORE
          writing the new prompt, so the choice is auditable.
-     (c) Model assignment is mechanical, not negotiable: if the next
-         row is an implementation row, the prompt targets Claude Code
-         CLI; if it is a validation row (suffix `v` or `av`/`bv`),
-         the prompt targets Antigravity AI / Gemini. Picking the
-         other family is a contract violation under R11.
+     (c) Model assignment is mechanical, not negotiable. The family and
+         tooling is governed by `.agents/vendor-policy.json` (see R11):
+
+         - Under `cross-family` policy (or no policy file): implementation
+           rows target `implementationFamily` (historically Claude Code
+           CLI); validation/Milestone rows target `reviewFamily`
+           (historically Antigravity AI / Gemini). Picking the other
+           family is a contract violation under R11.
+
+         - Under `single-family` policy: both implementation and validation
+           rows target the same family. The specific model within that
+           family (Haiku vs Sonnet vs Opus for Claude; Base vs Specialist
+           for Gemini) is determined by the tier table in
+           `antigravity-taxonomy.md` §3. Tooling (Claude Code CLI vs
+           Antigravity AI) follows the declared family.
      (d) A session whose handoff was followed by a "next session
          prompt" that skipped a row is itself in violation of R17
          and must be reopened.

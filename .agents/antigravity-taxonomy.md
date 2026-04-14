@@ -14,6 +14,43 @@
 
 ---
 
+## §0 — Vendor Policy (added 2026-04-14)
+
+This project operates under an explicit **vendor policy** declared in
+`.agents/vendor-policy.json`. The policy governs which model families
+perform implementation vs. validation, and determines how R11 and R17(c)
+interpret the tables below.
+
+### Effective policy as of 2026-04-14
+
+```json
+{
+  "policy": "single-family",
+  "implementationFamily": "claude",
+  "reviewFamily": "claude",
+  "adversarialChecklistMandatory": true
+}
+```
+
+### What this policy changes in the tables below
+
+| Section | Under `cross-family` (original) | Under `single-family` (current) |
+|---------|--------------------------------|---------------------------------|
+| §1 tier table (Gemini rows) | Active — Gemini Base and Gemini Specialist are available routing targets. | Inactive — Gemini tiers are not available for routing. Sessions that historically routed to Gemini now route to the equivalent Claude tier (see §3 overlay). |
+| §3 Milestone routing | Milestones A2, B, C → Gemini 3.1 Pro. | Milestones A2, B, C → Claude Opus 4.6 (High tier) with `adversarialChecklistMandatory: true`. |
+| §4 R11 Compliance Matrix | Cross-family rows = COMPLIANT; same-family rows = EXCEPTION (mitigated). | All rows = COMPLIANT (single-family + adversarial). The "EXCEPTION" framing no longer applies — same-family is the declared mode. |
+| Adversarial Checklist (§4) | Required only for EXCEPTION rows (Session 16 historically). | **Required for every review session**, promoted from mitigation to primary anti-gaming defense. |
+
+### When the policy is reconsidered
+
+If the operator gains access to a second model family (e.g. Gemini 3.1 Pro
+access is restored), they may flip `.agents/vendor-policy.json` to
+`cross-family` and re-run Milestone B / Milestone C as cross-family
+counterchecks. Prior same-family validation reports remain valid history;
+new reviews from that point run cross-family.
+
+---
+
 ## §1 — Model Taxonomy & Antigravity Tiers
 
 ### Tabela de Tiers
@@ -103,12 +140,12 @@ Derivados das falhas empíricas documentadas em `.agents/process-hardening.md`,
 | **14c** | @BuildRemediation | **Medium** | **Claude Sonnet 4.6** | Fix dependência circular, init git, CHANGELOG, readJsonFile try/catch, reset non-TTY, gate path separators, cleanup artefatos, .gitignore, types field. | — (validado no Milestone A2) |
 | **14d** | @TestHardener | **Medium** | **Claude Sonnet 4.6** | Novos testes: generate-command, reset-command, JSON corrupto, seed corrupto. Target >= 48 testes. | — (validado no Milestone A2) |
 | **14e** | @GateHardener | **Medium** | **Claude Sonnet 4.6** | Fix gate regex bilíngue, verdict parse-error, copy-seed JSON validation. | — (validado no Milestone A2) |
-| **Milestone A2** | @PreFlightValidator | **Gemini Specialist** | **Gemini 3.1 Pro** | Validação consolidada 14c+14d+14e. Build, testes, preflight, git, cleanup. | COMPLIANT (Sonnet → Gemini Specialist) |
-| **15** | @CrossPlatformVerifier | **Medium** | **Claude Sonnet 4.6** | Cross-platform verification envolve bug-fixing ativo (não apenas execução mecânica). Failure modes DC-1/DC-5 são de Opus, não Sonnet. Escalação para Opus via §6 se houver bug OS-level intratável. | — (validado no Milestone B) |
-| **16** | @AntigravityFinalAuditor | **Gemini Base** | **Gemini 3.0** | Auditoria final E2E — execução mecânica rígida (DC-5 aplica-se a Claude). Verificação spec-por-spec sem julgamento arquitetural. | **EXCEPTION** — same-family no Milestone B, mitigada (ver §4) |
-| **Milestone B** | @MilestoneReviewer | **Gemini Specialist** | **Gemini 3.1 Pro** | Validação consolidada de Sessions 15 + 16. Substitui 15v e 16v individuais. Cross-platform report review + final audit cross-check. | Session 15: COMPLIANT. Session 16: EXCEPTION mitigada. |
+| **Milestone A2** | @PreFlightValidator | **Gemini Specialist** (historical) / **High** (under single-family) | **Gemini 3.1 Pro** (historical — actually executed on Claude Opus 4.6 per validation file) | Validação consolidada 14c+14d+14e. Build, testes, preflight, git, cleanup. | COMPLIANT (single-family + adversarial, retroactive) |
+| **15** | @CrossPlatformVerifier | **Medium** | **Claude Sonnet 4.6** (actual: Claude Opus 4.6 per handoff) | Cross-platform verification envolve bug-fixing ativo (não apenas execução mecânica). Failure modes DC-1/DC-5 são de Opus, não Sonnet. Escalação para Opus via §6 se houver bug OS-level intratável. | — (validado no Milestone B) |
+| **16** | @AntigravityFinalAuditor | **Gemini Base** (historical) / **High** (under single-family) | **Gemini 3.0** (historical — actually executed on Claude Opus 4.6 as R11 exception, now re-classified as single-family baseline) | Auditoria final E2E — execução mecânica rígida. Verificação spec-por-spec sem julgamento arquitetural. | COMPLIANT (single-family + adversarial) |
+| **Milestone B** | @MilestoneReviewer | **Gemini Specialist** (historical) / **High** (under single-family) | **Gemini 3.1 Pro** (historical — actually executed on Claude Opus 4.6, inline remediation 2026-04-14) | Validação consolidada de Sessions 15 + 16. Substitui 15v e 16v individuais. Cross-platform report review + final audit cross-check with mandatory adversarial checklist. | COMPLIANT (single-family + adversarial) |
 | **17** | @Publisher | **Low** | **Claude Haiku 4.6** | Version bump, CHANGELOG, tag, npm publish. Operações de string/metadata com dry-run obrigatório antes de publish real. | — (validado no Milestone C) |
-| **Milestone C** | @FinalMilestoneReviewer | **Gemini Specialist** | **Gemini 3.1 Pro** | Validação consolidada de Session 17 + sign-off total do projeto. Verificação do pacote publicado, install do registry, compliance final. | COMPLIANT (Haiku → Gemini Specialist) |
+| **Milestone C** | @FinalMilestoneReviewer | **Gemini Specialist** (historical) / **High** (under single-family) | **Gemini 3.1 Pro** (historical) / **Claude Opus 4.6** (under single-family, effective 2026-04-14) | Validação consolidada de Session 17 + sign-off total do projeto. Verificação do pacote publicado, install do registry, compliance final, adversarial checklist. | COMPLIANT (single-family + adversarial) |
 
 ### Consolidação de Validações em Milestones
 
@@ -123,37 +160,40 @@ Derivados das falhas empíricas documentadas em `.agents/process-hardening.md`,
 
 ---
 
-## §4 — R11 Compliance Matrix
+## §4 — R11 Compliance Matrix (policy-aware)
 
-### Quadro de Conformidade
+### Policy context
 
-| # | Implementação | Família Impl | Validação/Milestone | Família Val | R11 Status | Notas |
-|---|--------------|-------------|---------------------|-------------|------------|-------|
-| 1 | Session 15 | Claude (Sonnet) | Milestone B | Gemini (Specialist) | **COMPLIANT** | Cross-family: Claude → Gemini |
-| 2 | Session 16 | Gemini (Base) | Milestone B | Gemini (Specialist) | **EXCEPTION** | Same-family: Gemini → Gemini. Mitigação obrigatória. |
-| 3 | Session 17 | Claude (Haiku) | Milestone C | Gemini (Specialist) | **COMPLIANT** | Cross-family: Claude → Gemini |
+R11 compliance is now policy-aware per `.agents/vendor-policy.json` and §0 above.
 
-### Resolução do Paradoxo R11
+- Under **`cross-family`**: rows where Implementação família ≠ Validação família are COMPLIANT; same-family rows are EXCEPTION and require the Adversarial Checklist.
+- Under **`single-family`** (current policy 2026-04-14): ALL rows are COMPLIANT by policy, provided the Adversarial Checklist is executed on every review.
 
-**Contexto:** O paradoxo documentado em `.agents/session-router-blockers.md` questionava se template-compliance (Gemini valida Gemini) deveria prevalecer sobre adversarial separation (Claude valida, mas falha em templates).
+### Quadro de Conformidade (sob single-family policy, 2026-04-14)
 
-**Decisão:** Template-compliance prevalece para Session 16, com mitigação explícita. Racional:
+| # | Implementação | Família Impl | Validação/Milestone | Família Val | R11 Status (single-family) | Adversarial Checklist | Notas |
+|---|--------------|-------------|---------------------|-------------|----------------------------|----------------------|-------|
+| 1 | Session 15 | Claude (Opus, per handoff) | Milestone B | Claude (Opus, per validation) | **COMPLIANT** | Executed 5/5 in `milestone-b-validation.md` §5 | Single-family baseline |
+| 2 | Session 16 | Claude (Opus, per handoff — historically Gemini Base slot) | Milestone B | Claude (Opus) | **COMPLIANT** | Executed 5/5 in `milestone-b-validation.md` §5 | Single-family baseline |
+| 3 | Session 17 | Claude (Haiku planned; may run on Opus if Haiku unavailable) | Milestone C | Claude (Opus) | **COMPLIANT** | MANDATORY in Milestone C | Single-family baseline |
 
-1. Session 15 foi **reclassificada para Claude Sonnet** (Tier Medium), eliminando o paradoxo para essa sessão. Os failure modes que desqualificaram Claude (DC-1 a DC-6) foram observados especificamente com Opus, não com Sonnet.
+### Historical context (pre-policy framing, archived)
 
-2. Session 16 permanece em Gemini Base porque a auditoria final mecânica é o caso exato de DC-5 (cross-platform strict execution) que desqualifica Claude.
+Before the `single-family` policy was declared on 2026-04-14, Sessions 15/16 and Milestone B operated under ad-hoc R11 overrides, and Session 16 was framed as an "EXCEPTION" for running Gemini Base → Gemini Specialist (when it actually ran Claude Opus → Claude Opus). The policy declaration retroactively reclassifies these rows as COMPLIANT under the declared operating mode, and the Adversarial Checklist — previously a mitigation for the EXCEPTION row — is now promoted to the primary anti-gaming defense on every review.
 
-3. Para Session 16, o Milestone B aplica a **Adversarial Checklist for Same-Family Review** (definida no `_agent-mandate.md` §2), que inclui verificações anti-blindspot específicas contra os padrões de falha conhecidos.
+### Adversarial Checklist (MANDATORY for every review under single-family policy)
 
-### Adversarial Checklist for Same-Family Review (Session 16 no Milestone B)
+Under `policy: single-family`, every review session (Nv, Milestone A/A2/B/C) MUST execute these 5 checks. Under `policy: cross-family`, these are required only for documented EXCEPTION rows.
 
-O reviewer (Gemini 3.1 Pro) DEVE executar estes checks adicionais ao revisar output de Gemini Base:
+1. **Evidence Literality** — For each test described as "executed" in the reviewed handoff, verify that full literal output was pasted (not just "all tests pass" or "verified").
+2. **File Existence** — For each file described as "created" or "verified", run `ls` to confirm real existence on disk.
+3. **Anti-"Technically Compiles"** — Search for completeness claims without E2E execution evidence. Compare against the Session 11 failure pattern (declared cross-platform success without executing on all platforms).
+4. **Per-Platform Output** — For cross-platform claims, require separate literal output from EACH platform individually. Generalizations like "works on all platforms" are automatically **FAIL**.
+5. **Spec-by-Spec Diff** — Verify every requirement in `project-specs.md` has a PASS with evidence, not just a narrative checkmark.
 
-1. **Evidence Literality** — Para cada teste descrito como "executado" no handoff de Session 16, verificar se o output literal completo foi colado (não apenas "all tests pass" ou "verified").
-2. **File Existence** — Para cada arquivo descrito como "criado" ou "verificado", executar `ls` para confirmar existência real no disco.
-3. **Anti-"Technically Compiles"** — Buscar claims de completude sem evidência de execução E2E real. Comparar contra o padrão da Session 11 (declarou cross-platform success sem executar em macOS/Linux).
-4. **Per-Platform Output** — Para claims cross-platform, exigir output separado de CADA plataforma individualmente. Generalizações como "works on all platforms" são automaticamente **FAIL**.
-5. **Spec-by-Spec Diff** — Verificar que cada requirement em `project-specs.md` tem um PASS com evidência, não apenas um checkmark narrativo.
+### Why the Adversarial Checklist replaces cross-family separation
+
+Cross-family review (Gemini ↔ Claude) was designed to prevent blindspot correlation between implementation and validation — two different model families are unlikely to share the same failure modes. Under single-family policy, that blindspot protection is absent, so the Adversarial Checklist substitutes by anchoring evidence in **observable file state and literal command output**, which any reviewer (same-family or otherwise) produces identically. The five checks each correspond to a specific Session 11 failure mode and make evidence anchored in file state rather than narrative.
 
 ---
 

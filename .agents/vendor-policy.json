@@ -1,0 +1,18 @@
+{
+  "policy": "single-family",
+  "implementationFamily": "claude",
+  "reviewFamily": "claude",
+  "adversarialChecklistMandatory": true,
+  "rationale": "Operator has Claude-only access. Under single-family policy, the Adversarial Checklist (antigravity-taxonomy.md section 4) is the primary anti-gaming defense on every review session, replacing cross-family separation.",
+  "decidedAt": "2026-04-14",
+  "validValues": {
+    "policy": ["cross-family", "single-family"],
+    "implementationFamily": ["claude", "gemini", "other"],
+    "reviewFamily": ["claude", "gemini", "other"]
+  },
+  "notes": {
+    "fallback": "When `.agents/vendor-policy.json` does not exist, rules R11 and R17(c) assume `cross-family` (backwards-compatible default).",
+    "upgradeToCrossFamily": "If cross-family access becomes available later, flip `policy` to `cross-family` and set `reviewFamily` accordingly. Prior same-family validation reports remain valid history; new reviews run cross-family from that point forward.",
+    "adversarialChecklistLocation": ".agents/antigravity-taxonomy.md section 4"
+  }
+}

@@ -91,4 +91,10 @@ Prompt file: `.agents/prompts/sessions/session-17-prompt.md`
 
 ## Session Notes
 
-_(O agente pode adicionar notas aqui durante a sessao)_
+### 2026-04-14 — Executed under explicit human R11 override
+
+- Planned reviewer: Gemini 3.1 Pro (Gemini Specialist). Gemini access unavailable at dispatch time; operator authorized Claude Opus 4.6 to execute as a supervised R11 override.
+- Both subject sessions (15, 16) were also executed by Claude Opus 4.6 — same-model triple-loop. Adversarial checklist applied strictly to compensate.
+- Deliverable: `.agents/validations/milestone-b-validation.md`.
+- Mechanical verdict: **NO-GO**, driven by a single self-inflicted placeholder-scan hit on `.agents/session-17-blockers.md:4` (file I wrote during the earlier Session 17 halt). Substantive evidence supports GO; remediation is one `git mv` away. See MF-1 in the validation document.
+- Recommend re-running this milestone as cross-family when Gemini 3.1 Pro becomes available.

@@ -1,9 +1,16 @@
 # Milestone C — @FinalMilestoneReviewer
 
-> **Modelo:** Gemini 3.1 Pro | **Tier:** Gemini Specialist
+> **Modelo:** Claude Opus 4.6 (`claude-opus-4-6`) | **Tier:** High
+> **Policy:** Single-family (see `.agents/vendor-policy.json`)
 > **Status:** PENDING
 > **Este arquivo:** `.agents/prompts/sessions/milestone-c-prompt.md`
 > **O agente PODE editar este arquivo** para adicionar notas na secao "Session Notes".
+>
+> **Note on model routing:** Under the project's `single-family` policy
+> (`.agents/vendor-policy.json`), Milestone reviews route to Claude Opus
+> 4.6 with the Adversarial Checklist MANDATORY. If the operator restores
+> cross-family access and flips the policy back to `cross-family`, this
+> prompt should be re-targeted at Gemini 3.1 Pro.
 
 ---
 
@@ -11,19 +18,23 @@
 
 Read in full and paste a 1-line summary of each:
 
-0. `.agents/prompts/_agent-mandate.md` (secao 2: Milestone Reviewers)
-1. `.agents/prompts/_production-contract.txt`
-2. `.agents/project-specs.md` (INTEIRO — referencia de compliance final)
-3. `.agents/PROJECT_ROADMAP.md`
-4. `.agents/handoffs/session-17-publisher.md`
-5. `.agents/validations/milestone-b-validation.md`
-6. `CHANGELOG.md`
+0. `.agents/prompts/_agent-mandate.md` (secao 2: Milestone Reviewers, policy-aware)
+1. `.agents/prompts/_production-contract.txt` (R11 and R17(c) are policy-aware)
+2. `.agents/vendor-policy.json` (declares single-family + Claude)
+3. `.agents/project-specs.md` (INTEIRO — referencia de compliance final)
+4. `.agents/PROJECT_ROADMAP.md`
+5. `.agents/handoffs/session-17-publisher.md` (the REAL Session 17 handoff, not the halt-record)
+6. `.agents/validations/milestone-b-validation.md`
+7. `CHANGELOG.md`
+8. `.agents/antigravity-taxonomy.md` (secao §0 Vendor Policy + §4 Adversarial Checklist)
 
 ---
 
-## Mission — Validacao Final + Sign-Off do Projeto
+## Mission — Final Validation + Project Sign-Off
 
-Este e o Milestone FINAL do projeto. Valida Session 17 (Claude Haiku -> Gemini Specialist = cross-family COMPLIANT) e emite sign-off total. Regra R9: EXECUTAR cada check, nao raciocinar sobre ele.
+Este e o Milestone FINAL do projeto. Valida Session 17 sob `policy: single-family`
+(Claude Haiku -> Claude Opus = same-family with MANDATORY adversarial checklist).
+Regra R9: EXECUTAR cada check, nao raciocinar sobre ele.
 
 | # | Bullet |
 |---|--------|
@@ -34,7 +45,8 @@ Este e o Milestone FINAL do projeto. Valida Session 17 (Claude Haiku -> Gemini S
 | 5 | Verificar git tag existe: `git tag` output. Colar. |
 | 6 | `npm run preflight` exit 0 no repo fonte. Colar output. |
 | 7 | Full compliance sign-off contra `project-specs.md` — tabela de requisitos com PASS/FAIL e evidencia para CADA requisito. |
-| 8 | Emitir GO / NO-GO final do projeto. |
+| 8 | **Adversarial Checklist (MANDATORY under single-family policy):** execute all 5 checks from `antigravity-taxonomy.md` §4 against Session 17's handoff. Each check must have an explicit result. |
+| 9 | Emitir GO / NO-GO final do projeto. |
 
 ---
 
@@ -44,6 +56,8 @@ Este e o Milestone FINAL do projeto. Valida Session 17 (Claude Haiku -> Gemini S
 - NAO confiar em narrativa dos handoffs — EXECUTAR cada check independentemente.
 - Verdito e mecanico: todos os checks PASS = GO. Qualquer FAIL = NO-GO.
 - Este e o ULTIMO checkpoint. GO significa que o projeto esta COMPLETO.
+- **Under single-family policy: the Adversarial Checklist is MANDATORY,
+  not optional.** Skipping any of the 5 checks is a protocol violation.
 
 ---
 
@@ -56,8 +70,9 @@ Este e o Milestone FINAL do projeto. Valida Session 17 (Claude Haiku -> Gemini S
 [ ] AC-4:  CHANGELOG.md tem entry para versao publicada — evidencia colada
 [ ] AC-5:  `git tag` mostra tag de versao — output colado
 [ ] AC-6:  `npm run preflight` exit 0 — output colado
-[ ] AC-7:  Tabela de compliance contra project-specs.md — >= 10 requisitos com PASS/FAIL
-[ ] AC-8:  GO / NO-GO final emitido
+[ ] AC-7:  Tabela de compliance contra project-specs.md — cada requisito com PASS/FAIL e evidencia
+[ ] AC-8:  Adversarial Checklist — 5/5 checks executados com resultado explicito
+[ ] AC-9:  GO / NO-GO final emitido
 ```
 
 ---
@@ -67,9 +82,11 @@ Este e o Milestone FINAL do projeto. Valida Session 17 (Claude Haiku -> Gemini S
 1. Se o package NAO esta publicado no registry (npm view falha): NO-GO automatico.
 2. Se a install from registry falha: NO-GO automatico.
 3. Se o E2E no sandbox falha em qualquer comando: NO-GO automatico.
-4. Se a tabela de compliance tem menos de 10 requisitos: FAIL.
-5. Se algum requisito mostra PASS sem evidencia literal: FAIL.
-6. GO emitido com FAILs pendentes: violacao grave.
+4. Se algum requisito mostra PASS sem evidencia literal: FAIL.
+5. GO emitido com FAILs pendentes: violacao grave.
+6. **Adversarial Checklist skipped or partially executed under single-family
+   policy: automatic FAIL.** (This tripwire replaces the cross-family
+   separation that single-family policy opts out of.)
 
 ---
 
@@ -80,7 +97,8 @@ Este e o Milestone FINAL do projeto. Valida Session 17 (Claude Haiku -> Gemini S
 ## Post-Project
 
 Se GO: O projeto Projeto-Zero esta **COMPLETO**. O CLI `@projeto-zero/cli` esta
-publicado, testado, auditado e validado cross-family em todas as etapas.
+publicado, testado, auditado e validado conforme a policy declarada em
+`.agents/vendor-policy.json`.
 
 Se NO-GO: Documentar exatamente quais checks falharam e qual sessao deve ser
 reaberta para correcao.

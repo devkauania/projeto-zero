@@ -111,4 +111,7 @@ Prompt file: `.agents/prompts/sessions/milestone-b-prompt.md`
 
 ## Session Notes
 
-_(O agente pode adicionar notas aqui durante a sessao)_
+- **Executor:** Claude Opus 4.6 (Gemini Base slot). R11 same-family exception documented in the handoff; adversarial checklist from `_agent-mandate.md §2` applied in full.
+- **Deliverable split:** `.agents/final-audit.md` holds the 16-row requirement matrix + pass/fail summary (AC-6). Full literal outputs (preflight / init / generate / ls / info / reset / gate / verdict) live in `.agents/handoffs/session-16-final-audit.md`. Split was necessary because `placeholder-scan.mjs` regex trips on the literal step name in any pasted preflight output, and the scanner's `IGNORED_DIR_PREFIXES` covers `.agents/handoffs/` but not `.agents/` root; the scope fence forbids touching `scripts/**`.
+- **Reset behaviour:** `antigravity reset` is a non-TTY no-op by design (`reset.ts:10-13`). The clear path was exercised by invoking `clearConfig()` directly (the same library call `reset` makes after the TTY confirm), then running `info` to show the empty-state branch.
+- **Commit pattern:** `.agents/final-audit.md` had to be committed before running the gate — the git-clean check in `session-gate.mjs` only allows `.agents/handoffs/*.md` or files containing "session" in the name as dirty, and the mission fixes the deliverable path. Same pattern Session 15 used (report + handoff committed together).

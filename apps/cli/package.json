@@ -1,6 +1,6 @@
 {
   "name": "@projeto-zero/cli",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Interactive CLI Setup Wizard — Antigravity. Scaffolds .agents/ prompts and Claude project config in any directory.",
   "type": "module",
   "main": "./dist/index.js",

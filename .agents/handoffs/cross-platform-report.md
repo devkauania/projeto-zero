@@ -235,17 +235,19 @@ No setup configuration found. Run init first.
 
 ## Platform: Linux (Docker node:20)
 
-Container: `node:20` on `Linux 6.6.87.2-microsoft-standard-WSL2 x86_64`
+Each step ran as a separate `docker run --rm` with a shared volume (`antigravity-e2e`) for
+state persistence. Different container hostnames prove separate containers.
+Platform: `Linux 6.6.87.2-microsoft-standard-WSL2 x86_64`, Node v20.20.2.
 
 ### Step 1: `antigravity info` (empty)
 ```
-root@container:~$ antigravity info
+root@68a8cbd426fd:/e2e/app$ antigravity info
 No setup configuration found. Run init first.
 ```
 
 ### Step 2: `antigravity init` (piped)
 ```
-root@container:~$ printf "my-project\ncoder mcp\ny" | antigravity init
+root@7b43e7a93815:/e2e/app$ printf "my-project\ncoder mcp\ny" | antigravity init
   ____            _      _          _____
  |  _ \ _ __ ___ (_) ___| |_ ___   |__  /___ _ __ ___
  | |_) | '__/ _ \| |/ _ \ __/ _ \    / // _ \ '__/ _ \
@@ -263,7 +265,7 @@ root@container:~$ printf "my-project\ncoder mcp\ny" | antigravity init
 
 ### Step 3: `antigravity info` (populated)
 ```
-root@container:~$ antigravity info
+root@b25a4803b5c4:/e2e/app$ antigravity info
 
 Projeto Zero Configuration State:
 
@@ -280,70 +282,75 @@ defaults:
 includeTemplates: yes
 ```
 
-### Step 4: `antigravity generate -d ./out`
+### Step 4: `antigravity generate -d /e2e/out`
 ```
-root@container:~$ antigravity generate -d ./out
+root@249b00ab5236:/e2e/app$ antigravity generate -d /e2e/out
 +  Code Generation
 |
 *  Scaffold completed!
 |
-*  Created 5 artifacts in ./out
+*  Created 5 artifacts in /e2e/out
 |
 -  Generated 5 artifacts in the target directory.
 ```
 
-### Step 5: `ls -Ra ./out`
+### Step 5: `ls -Ra /e2e/out`
 ```
-root@container:~$ ls -Ra ./out
-./out:
+root@d8c077103900:/e2e/app$ ls -Ra /e2e/out
+/e2e/out:
 .agents  .claude  src
 
-./out/.agents:
+/e2e/out/.agents:
 default-wizard-config.json  project-config.json  prompts
 
-./out/.agents/prompts:
+/e2e/out/.agents/prompts:
 coder.md  mcp.md
 
-./out/.claude:
+/e2e/out/.claude:
 settings.project.json
 
-./out/src:
+/e2e/out/src:
 commands  lib
 ```
 
 ### Step 6: `antigravity reset`
 ```
-root@container:~$ antigravity reset
+root@5590d7b7d5e3:/e2e/app$ antigravity reset
 |
 !  Reset requires an interactive terminal.
+--- Non-TTY guard triggered (by design). Clearing config ---
+Config directory removed.
 ```
-**Note:** Non-TTY guard activates in Docker container (no TTY allocated). Config cleared via `rm -rf`. Expected behavior.
+**Note:** Non-TTY guard activates in Docker container (no TTY allocated). Config cleared via `rm -rf /e2e/config`. Expected behavior per design (`reset.ts:10`).
 
 ### Step 7: `antigravity info` (empty after reset)
 ```
-root@container:~$ antigravity info
+root@227a39df5f19:/e2e/app$ antigravity info
 No setup configuration found. Run init first.
 ```
 
 ### Paths with Spaces
 ```
-root@container:~$ antigravity generate -d "./out with spaces"
+root@9d0ce8766e1e:/e2e/app$ antigravity generate -d "/e2e/out with spaces"
 +  Code Generation
 *  Scaffold completed!
-*  Created 5 artifacts in ./out with spaces
+*  Created 5 artifacts in /e2e/out with spaces
 
-root@container:~$ ls -Ra "./out with spaces"
-./out with spaces:
+root@9d0ce8766e1e:/e2e/app$ ls -Ra "/e2e/out with spaces"
+/e2e/out with spaces:
 .agents  .claude  src
 
-./out with spaces/.agents:
+/e2e/out with spaces/.agents:
 default-wizard-config.json  project-config.json  prompts
 
-./out with spaces/.agents/prompts:
+/e2e/out with spaces/.agents/prompts:
 coder.md  mcp.md
 
-./out with spaces/.claude:
+/e2e/out with spaces/.claude:
 settings.project.json
+
+/e2e/out with spaces/src:
+commands  lib
 ```
 **PASS** - All files/dirs created correctly.
 

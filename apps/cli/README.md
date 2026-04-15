@@ -109,9 +109,9 @@ $ npx @projeto-zero/cli generate --dir ./src
 │
 ◇  Scaffold completed!
 │
-◇  Created 8 artifacts in ./src
+◇  Created 4 artifacts in ./src
 │
-└  Generated 8 artifacts in the target directory.
+└  Generated 4 artifacts in the target directory.
 ```
 
 ---

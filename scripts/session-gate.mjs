@@ -113,9 +113,11 @@ function checkGitClean(sessionN) {
     log("PASS", "git-clean", "working tree clean");
     return true;
   }
-  // Allow handoff + roadmap dirty (handoffs live in .agents/handoffs/).
+  // Allow handoff + roadmap + validation artifacts dirty. Handoffs live in
+  // .agents/handoffs/, validations in .agents/validations/, and a few
+  // session-named files live directly under .agents/.
   const allowedRe = new RegExp(
-    `^[ MARCU?]{1,2}\\s+(\\.agents/PROJECT_ROADMAP\\.md|\\.agents/handoffs/.*\\.md|\\.agents/.*session.*\\.md)$`,
+    `^[ MARCU?]{1,2}\\s+(\\.agents/PROJECT_ROADMAP\\.md|\\.agents/handoffs/.*\\.md|\\.agents/validations/.*\\.md|\\.agents/.*session.*\\.md)$`,
     "i"
   );
   const unexpected = dirty.filter((l) => !allowedRe.test(l.replace(/\\/g, "/")));

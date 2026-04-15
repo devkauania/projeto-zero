@@ -43,6 +43,8 @@ const IGNORED_FILES = new Set([
   join("scripts", "verdict.mjs"),
   // The allowlist documents allowed exceptions.
   join("scripts", "placeholder-allowlist.txt"),
+  // Tarball audit script — legitimately lists the scan keywords as data.
+  join("scripts", "audit-tarball.mjs"),
   // Narrative project-management docs in .agents/ root.
   join(".agents", "PROJECT_ROADMAP.md"),
   join(".agents", "antigravity-taxonomy.md"),

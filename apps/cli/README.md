@@ -72,7 +72,7 @@ antigravity reset
 
 ### `ANTIGRAVITY_CONFIG_DIR`
 
-The CLI caches your settings globally using `conf`. You can override the directory where these preferences are saved by providing the `ANTIGRAVITY_CONFIG_DIR` environment variable. This is highly recommended for CI/CD pipelines, sanboxes, or running isolated tests to prevent modifying your local development host's native configuration. 
+The CLI caches your settings globally using `conf`. You can override the directory where these preferences are saved by providing the `ANTIGRAVITY_CONFIG_DIR` environment variable. This is highly recommended for CI/CD pipelines, sandboxes, or running isolated tests to prevent modifying your local development host's native configuration.
 
 ```bash
 # Example overriding config structure

@@ -1,6 +1,12 @@
 // One-shot audit of the packaged tarball. Not wired into gate scripts.
 // Usage: node scripts/audit-tarball.mjs
-import { execSync } from "node:child_process";
+//
+// Ledger row 9 — this file previously used `execSync(tmplLiteral)` with
+// path interpolation. Converted to argv-array `spawnSync` to eliminate
+// the shell-quoting footgun. `npm` is still invoked via shell:true on
+// Windows (where it's a .cmd), but with argv as an array so Node
+// handles quoting, not the shell.
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -8,19 +14,32 @@ import path from "node:path";
 const cliDir = path.resolve("apps/cli");
 process.chdir(cliDir);
 
-execSync("npm pack --silent", { stdio: "inherit" });
-const tgz = path.join(cliDir, "projeto-zero-cli-1.0.0.tgz");
+function run(cmd, args, opts = {}) {
+  const res = spawnSync(cmd, args, {
+    stdio: "inherit",
+    shell: process.platform === "win32", // .cmd shim compat
+    ...opts,
+  });
+  if (res.status !== 0) {
+    throw new Error(`${cmd} ${args.join(" ")} exited with ${res.status}`);
+  }
+}
+
+run("npm", ["pack", "--silent"]);
+
+// Read the emitted filename from the package — don't hardcode the version.
+const pkgJson = JSON.parse(fs.readFileSync(path.join(cliDir, "package.json"), "utf8"));
+const version = pkgJson.version;
+const tgz = path.join(cliDir, `projeto-zero-cli-${version}.tgz`);
 if (!fs.existsSync(tgz)) {
-  throw new Error("tarball not produced: " + tgz);
+  throw new Error(`tarball not produced: ${tgz}`);
 }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "audit-"));
 // On Windows, msys tar interprets `C:` as a hostname — use --force-local.
-// Run from the tmp dir with tgz passed as absolute to sidestep path-quoting quirks.
-execSync(`tar --force-local -xzf "${tgz}"`, {
-  stdio: "inherit",
-  cwd: tmp,
-});
+// argv-array form: the tgz path is a discrete argv token, never interpolated
+// into a shell command string.
+run("tar", ["--force-local", "-xzf", tgz], { cwd: tmp, shell: false });
 fs.unlinkSync(tgz);
 
 function walk(dir, base = "") {

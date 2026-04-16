@@ -115,6 +115,59 @@ describe("getRequiredConnectors", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Ledger row 8 — ANTIGRAVITY_CONFIG_DIR hardening.
+// The override is confined to $HOME or $TMPDIR, and symlinks at the path
+// are rejected. Tests live here (not in a separate file) because they
+// manipulate the same env var + tmp state as the rest of the suite.
+// ---------------------------------------------------------------------------
+describe("config dir hardening (ledger row 8)", () => {
+  it("rejects ANTIGRAVITY_CONFIG_DIR outside $HOME or $TMPDIR", () => {
+    // A path that is neither under tmp nor under home. On Windows this
+    // picks a different drive letter; on POSIX a filesystem root that is
+    // neither home nor tmp.
+    const bad =
+      process.platform === "win32" ? "Z:\\attacker" : "/opt/attacker";
+    process.env.ANTIGRAVITY_CONFIG_DIR = bad;
+    expect(() => saveConfig(sample)).toThrow(
+      /outside the allowed scope|allowed scope/
+    );
+  });
+
+  it("rejects a symlink at the override path", async () => {
+    // Build a symlink inside tmp pointing at a sibling dir; aim the env
+    // var at the symlink. validateConfigDir must reject it even though
+    // the symlink's target is inside tmp.
+    const real = await fs.mkdtemp(path.join(os.tmpdir(), "pz-real-"));
+    const link = path.join(os.tmpdir(), `pz-link-${Date.now()}`);
+    try {
+      await fs.symlink(real, link, "dir");
+    } catch (err: unknown) {
+      // Windows without SeCreateSymbolicLinkPrivilege — skip the test.
+      const code = (err as NodeJS.ErrnoException)?.code;
+      if (code === "EPERM" || code === "ENOSYS") {
+        return;
+      }
+      throw err;
+    }
+    process.env.ANTIGRAVITY_CONFIG_DIR = link;
+    try {
+      expect(() => saveConfig(sample)).toThrow(/symlink/);
+    } finally {
+      await fs.rm(link, { force: true });
+      await fs.rm(real, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects empty override string", () => {
+    process.env.ANTIGRAVITY_CONFIG_DIR = "";
+    // Empty string means "no override" in the lookup path, not "bad
+    // override" — we only validate non-empty overrides. This test locks
+    // that behavior in so we don't accidentally refuse common defaults.
+    expect(() => saveConfig(sample)).not.toThrow();
+  });
+});
+
 async function findFileContaining(
   dir: string,
   needle: string

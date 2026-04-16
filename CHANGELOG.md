@@ -52,6 +52,12 @@ All notable changes to this project will be documented in this file.
   `$HOME` or `$TMPDIR`. The scope-confinement throw (ledger row 8) was
   already correct; this completes the UX side. Caught in Phase 2 E2E
   recon (`audit/phase2-e2e-v1.1.0.md`); see `audit/patches/06`.
+- `swarm --live` now wires a `'error'` listener on each spawned agent,
+  so a missing `claude` binary (ENOENT) produces a friendly per-agent
+  message with an install-hint URL and a non-zero exit — instead of
+  hanging the Promise.all while Node printed an unhandled-error warning.
+  Empirically verified by `swarm-spawner.test.ts` (ENOENT shape) and
+  documented in `audit/patches/07-swarm-enoent-handler.md`.
 
 ### Security
 - Vulnerability ledger rows 4, 5, 6, 7, 8, 9, 11, 12 all closed with patch

@@ -61,3 +61,52 @@ describe("agent-spawner — argv-array only (anti-injection)", () => {
     expect(src).toMatch(/spawn\s*\(\s*bin\s*,\s*argv\s*,/);
   });
 });
+
+describe("agent-spawner — missing-binary behavior (ENOENT)", () => {
+  it("spawnClaudeAgent with a nonexistent binary fires 'error' (never hangs silently)", async () => {
+    // This locks the invariant the live-swarm loop in commands/swarm.ts
+    // depends on: child_process.spawn emits an 'error' event (not a
+    // synchronous throw) when the binary cannot be located. Without this
+    // guarantee, our Promise.all(exit|error) wiring would hang on
+    // missing-claude.
+    const { spawnClaudeAgent } = await import("../lib/swarm/agent-spawner.js");
+    const tmpPrompt = path.join(
+      path.dirname(SPAWNER_SRC),
+      "..",
+      "..",
+      "__tests__",
+      "fixtures-missing-prompt.txt"
+    );
+    // Write a tiny prompt file on disk so the readFileSync stdin step
+    // doesn't fail before the spawn does.
+    fs.writeFileSync(tmpPrompt, "irrelevant\n");
+    try {
+      const { proc } = spawnClaudeAgent({
+        bin:
+          process.platform === "win32"
+            ? "C:\\does\\not\\exist\\pz-missing-bin.exe"
+            : "/does/not/exist/pz-missing-bin",
+        argv: ["--permission-mode", "plan", "--max-turns", "1"],
+        cwd: process.cwd(),
+        promptFile: tmpPrompt,
+      });
+      const result = await new Promise<{ event: string; code?: number | null; err?: string }>(
+        (resolve) => {
+          proc.on("exit", (code) => resolve({ event: "exit", code }));
+          proc.on("error", (err: Error) =>
+            resolve({ event: "error", err: err.message })
+          );
+          setTimeout(() => resolve({ event: "timeout" }), 4000);
+        }
+      );
+      expect(result.event).toBe("error");
+      expect(result.err).toMatch(/ENOENT/);
+    } finally {
+      try {
+        fs.rmSync(tmpPrompt);
+      } catch {
+        /* best effort */
+      }
+    }
+  }, 10000);
+});

@@ -295,15 +295,48 @@ export const swarmCommand = new Command("swarm")
         return s;
       });
 
-      // Wait for all to exit.
+      // Wait for each agent's terminal event — whichever of "exit" or
+      // "error" fires first. Without the "error" branch, a missing
+      // `claude` binary (ENOENT on spawn) would leave Promise.all
+      // hanging forever while Node printed an unhandled-error warning.
+      // ledger row 4 envelope is still intact either way — the binary
+      // never runs — but the UX must be a friendly exit, not a hang.
+      const failures: string[] = [];
       await Promise.all(
-        processes.map(
-          (s) =>
+        plan.agents.map(
+          (a, i) =>
             new Promise<void>((resolve) => {
-              s.proc.on("exit", () => resolve());
+              const s = processes[i];
+              const tag = theme.brand(`[agent-${a.index}]`);
+              let settled = false;
+              const done = () => {
+                if (settled) return;
+                settled = true;
+                resolve();
+              };
+              s.proc.on("exit", done);
+              s.proc.on("error", (err: Error) => {
+                const hint =
+                  /ENOENT/.test(err.message) && /claude/i.test(err.message)
+                    ? ` — is Claude Code installed and on PATH? (https://docs.claude.com/claude-code)`
+                    : "";
+                console.error(
+                  `${tag} ${theme.warning(`spawn failed: ${err.message}${hint}`)}`
+                );
+                failures.push(`agent-${a.index}: ${err.message}`);
+                done();
+              });
             })
         )
       );
+      if (failures.length > 0) {
+        console.error(
+          theme.warning(
+            `\nSwarm ${plan.id} finished with ${failures.length} spawn failure(s).`
+          )
+        );
+        process.exit(1);
+      }
 
       console.log(
         theme.success(

@@ -76,6 +76,15 @@ antigravity info
 antigravity reset
 ```
 
+### `swarm`
+Launches a parallel Claude Code agent swarm against the prompts in `.agents/prompts/*.md`. Dry-run is the default — agents only spawn when you pass `--live`. See [`docs/SWARM.md`](../../docs/SWARM.md) for safety defaults, grid layouts, and the `--i-understand` gate.
+
+```bash
+antigravity swarm --count 3          # preview plan (dry-run)
+antigravity swarm --count 3 --live   # actually spawn
+antigravity swarm --count 2 --mode verify --live   # read-only review pass
+```
+
 ---
 
 ## Environment Variables

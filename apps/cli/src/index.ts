@@ -5,6 +5,7 @@ import { initCommand } from "./commands/init.js";
 import { generateCommand } from "./commands/generate.js";
 import { infoCommand } from "./commands/info.js";
 import { resetCommand } from "./commands/reset.js";
+import { swarmCommand } from "./commands/swarm.js";
 import { VERSION } from "./lib/version.js";
 
 const program = new Command();
@@ -18,5 +19,6 @@ program.addCommand(initCommand);
 program.addCommand(generateCommand);
 program.addCommand(infoCommand);
 program.addCommand(resetCommand);
+program.addCommand(swarmCommand);
 
 program.parse();

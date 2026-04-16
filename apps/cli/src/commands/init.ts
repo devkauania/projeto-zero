@@ -210,12 +210,12 @@ export const initCommand = new Command("init")
           }),
         agents: () =>
           p.multiselect({
-            message: "Which agents do you want to enable?",
+            message: "Select Claude Code subagents to scaffold:",
             options: [
-              { value: "coder", label: "ClaudeCoder", hint: "Backend logic" },
-              { value: "designer", label: "AntigravityDesigner", hint: "Terminal UI/UX" },
-              { value: "auditor", label: "AntigravityAuditor", hint: "Test runner" },
-              { value: "mcp", label: "MCPConfigurator", hint: "MCP tool connections" },
+              { value: "coder", label: "coder", hint: "Backend logic subagent" },
+              { value: "designer", label: "designer", hint: "Terminal UI/UX subagent" },
+              { value: "auditor", label: "auditor", hint: "Test-runner subagent" },
+              { value: "mcp", label: "mcp", hint: "MCP connector configurator" },
             ],
             required: true,
           }),

@@ -1,6 +1,16 @@
 # @projeto-zero/cli
 
-Interactive CLI Setup Wizard for the Antigravity project. Scaffolds `.agents/` prompts and Claude project config in any directory.
+Scaffolds Claude Code agent workspaces — subagents, skills, MCP connectors — and launches parallel Claude Code agent swarms.
+
+## Prerequisites
+
+Requires the Claude Code CLI. Verify with:
+
+```bash
+claude --version
+```
+
+Install it from https://docs.claude.com/claude-code if it's missing.
 
 ## Installation
 
@@ -32,8 +42,8 @@ The standard workflow:
 ### `init`
 Initialize the wizard with interactive prompts. It will ask for:
 - Your project's name.
-- Which agents you want to enable (such as `ClaudeCoder`, `AntigravityDesigner`, etc.).
-- Which MCP connectors to enable (if the MCP agent was selected).
+- Which Claude Code subagents to scaffold (coder, designer, auditor, mcp — selected by role, not by legacy display name).
+- Which MCP connectors to enable (if the `mcp` subagent is selected).
 - Whether to include `.agents/` prompt templates.
 
 This command writes your choices to disk (persisted statelessly via `conf` package), but **does not** generate any files.
@@ -93,8 +103,8 @@ $ npx @projeto-zero/cli init
 ◇  What is your project name?
 │  super-app
 │
-◇  Which agents do you want to enable?
-│  ClaudeCoder, AntigravityAuditor
+◇  Select Claude Code subagents to scaffold:
+│  coder, auditor
 │
 ◇  Generate .agents/ prompt templates?
 │  Yes

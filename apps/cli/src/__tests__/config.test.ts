@@ -56,8 +56,6 @@ const sample: WizardConfig = {
   },
   defaults: {
     targetDir: ".",
-    scaffoldAgentsDir: true,
-    scaffoldPromptsDir: true,
   },
 };
 

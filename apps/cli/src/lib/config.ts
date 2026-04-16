@@ -12,8 +12,6 @@ export interface MCPConnector {
 
 export interface ScaffoldDefaults {
   targetDir: string;
-  scaffoldAgentsDir: boolean;
-  scaffoldPromptsDir: boolean;
 }
 
 // --- Wizard configuration ---

@@ -31,108 +31,146 @@ function baseConfig(overrides: Partial<WizardConfig> = {}): WizardConfig {
     },
     defaults: {
       targetDir: ".",
-      scaffoldAgentsDir: true,
-      scaffoldPromptsDir: true,
     },
     ...overrides,
   };
 }
 
-describe("scaffoldProject", () => {
-  it("creates the expected directory skeleton on disk", async () => {
+describe("scaffoldProject — Claude Code workspace shape", () => {
+  it("creates the core .agents / skills directory skeleton", async () => {
     const out = path.join(tmp, "proj");
-    const created = await scaffoldProject(baseConfig(), out);
+    await scaffoldProject(baseConfig(), out);
 
-    for (const dir of ["src", "src/commands", "src/lib", ".agents/prompts"]) {
-      const full = path.join(out, dir);
-      const stat = await fs.stat(full);
+    for (const dir of [".agents", ".agents/prompts", "skills"]) {
+      const stat = await fs.stat(path.join(out, dir));
       expect(stat.isDirectory()).toBe(true);
     }
-
-    // All directory entries in the return value end with a slash.
-    const dirs = created.filter((i) => i.endsWith("/"));
-    expect(dirs.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("writes agent prompt templates only for selected agents when includeTemplates=true", async () => {
+  it("always writes .agents/prompts/.gitkeep for Stage 3 prompt browser", async () => {
+    const out = path.join(tmp, "gitkeep");
+    await scaffoldProject(baseConfig(), out);
+    await fs.access(path.join(out, ".agents/prompts/.gitkeep"));
+  });
+
+  it("writes CLAUDE.md at repo root referencing the selected subagents and skills", async () => {
+    const out = path.join(tmp, "claudemd");
+    await scaffoldProject(baseConfig({ agents: ["coder", "auditor"] }), out);
+    const body = await fs.readFile(path.join(out, "CLAUDE.md"), "utf-8");
+    expect(body).toContain("# scaffold-demo");
+    expect(body).toContain(".agents/coder.md");
+    expect(body).toContain(".agents/auditor.md");
+    expect(body).toContain("skills/coder/SKILL.md");
+    expect(body).toContain("skills/auditor/SKILL.md");
+  });
+
+  it("writes subagent + skill files only for selected agents when includeTemplates=true", async () => {
     const out = path.join(tmp, "withTemplates");
     await scaffoldProject(baseConfig({ agents: ["coder", "mcp"] }), out);
 
-    const coder = await fs.readFile(
-      path.join(out, ".agents/prompts/coder.md"),
-      "utf-8"
-    );
-    expect(coder).toContain("ClaudeCoder");
+    // Selected: subagent + skill present.
+    const coderSub = await fs.readFile(path.join(out, ".agents/coder.md"), "utf-8");
+    expect(coderSub).toMatch(/^---\nname: coder\n/);
+    expect(coderSub).toContain("tools: Read, Write, Edit, Bash, Grep, Glob");
 
-    const mcp = await fs.readFile(
-      path.join(out, ".agents/prompts/mcp.md"),
-      "utf-8"
-    );
-    expect(mcp).toContain("MCPConfigurator");
+    const coderSkill = await fs.readFile(path.join(out, "skills/coder/SKILL.md"), "utf-8");
+    expect(coderSkill).toMatch(/^---\nname: coder\n/);
 
-    // Designer was not selected → no file.
-    await expect(
-      fs.access(path.join(out, ".agents/prompts/designer.md"))
-    ).rejects.toThrow();
+    const mcpSub = await fs.readFile(path.join(out, ".agents/mcp.md"), "utf-8");
+    expect(mcpSub).toContain("name: mcp");
+
+    const mcpSkill = await fs.readFile(path.join(out, "skills/mcp/SKILL.md"), "utf-8");
+    expect(mcpSkill).toContain("name: mcp");
+
+    // Not selected: files absent.
+    await expect(fs.access(path.join(out, ".agents/designer.md"))).rejects.toThrow();
+    await expect(fs.access(path.join(out, "skills/designer/SKILL.md"))).rejects.toThrow();
   });
 
-  it("skips prompt templates when includeTemplates=false", async () => {
+  it("skips subagent + skill file bodies when includeTemplates=false but still creates the dirs", async () => {
     const out = path.join(tmp, "noTemplates");
     await scaffoldProject(
       baseConfig({ agents: ["coder"], includeTemplates: false }),
       out
     );
-    await expect(
-      fs.access(path.join(out, ".agents/prompts/coder.md"))
-    ).rejects.toThrow();
+    await expect(fs.access(path.join(out, ".agents/coder.md"))).rejects.toThrow();
+    await expect(fs.access(path.join(out, "skills/coder/SKILL.md"))).rejects.toThrow();
+    // Core dirs + .gitkeep still present.
+    await fs.access(path.join(out, ".agents/prompts/.gitkeep"));
+    const stat = await fs.stat(path.join(out, "skills"));
+    expect(stat.isDirectory()).toBe(true);
   });
 
-  it("emits .claude/settings.project.json with required connectors when mcp is enabled", async () => {
-    const out = path.join(tmp, "withMcp");
+  it("writes .mcp/<connector>.json for each selected connector", async () => {
+    const out = path.join(tmp, "mcpConnectors");
     await scaffoldProject(baseConfig({ agents: ["coder", "mcp"] }), out);
 
-    const raw = await fs.readFile(
-      path.join(out, ".claude/settings.project.json"),
-      "utf-8"
-    );
+    const raw = await fs.readFile(path.join(out, ".mcp/supabase.json"), "utf-8");
     const parsed = JSON.parse(raw);
-    expect(parsed.mcpConnectors).toEqual(["supabase"]);
-    expect(typeof parsed.generatedAt).toBe("string");
+    expect(parsed.id).toBe("supabase");
+    expect(parsed.label).toBe("Supabase");
+    expect(parsed.tools).toEqual(["execute_sql"]);
   });
 
-  it("does not create .claude/ when mcp agent is not selected", async () => {
-    const out = path.join(tmp, "noMcp");
-    await scaffoldProject(baseConfig({ agents: ["coder"] }), out);
-    await expect(fs.access(path.join(out, ".claude"))).rejects.toThrow();
+  it("does not create .mcp/ when no connectors are selected", async () => {
+    const out = path.join(tmp, "noMcpDir");
+    await scaffoldProject(baseConfig({ mcpConnectors: {} }), out);
+    await expect(fs.access(path.join(out, ".mcp"))).rejects.toThrow();
   });
 
-  it("always writes .agents/project-config.json with the project name and agent list", async () => {
-    const out = path.join(tmp, "marker");
-    await scaffoldProject(baseConfig(), out);
+  it("returns a non-empty list of created artifacts", async () => {
+    const out = path.join(tmp, "returnValue");
+    const created = await scaffoldProject(baseConfig(), out);
+    expect(created).toContain("CLAUDE.md");
+    expect(created).toContain(".agents/coder.md");
+    expect(created).toContain("skills/coder/SKILL.md");
+    expect(created).toContain(".agents/prompts/.gitkeep");
+  });
+});
 
-    const raw = await fs.readFile(
-      path.join(out, ".agents/project-config.json"),
-      "utf-8"
+// Snapshot/drift guard for the hardcoded template literals. If a future edit
+// accidentally changes the subagent frontmatter shape (name/description/tools
+// keys), this test fails and forces a conscious update. Addresses ledger row
+// 6 — prompt injection defense via hardcoded, snapshot-tested templates.
+describe("scaffoldProject — template drift guard", () => {
+  it("subagent frontmatter exposes exactly name/description/tools keys", async () => {
+    const out = path.join(tmp, "drift");
+    await scaffoldProject(
+      baseConfig({ agents: ["coder", "designer", "auditor", "mcp"] }),
+      out
     );
-    const parsed = JSON.parse(raw);
-    expect(parsed.projectName).toBe("scaffold-demo");
-    expect(parsed.agents).toEqual(["coder", "mcp"]);
-    expect(typeof parsed.createdAt).toBe("string");
+    for (const agent of ["coder", "designer", "auditor", "mcp"]) {
+      const body = await fs.readFile(path.join(out, `.agents/${agent}.md`), "utf-8");
+      const frontmatter = body.match(/^---\n([\s\S]*?)\n---/);
+      expect(frontmatter, `${agent}.md frontmatter`).not.toBeNull();
+      const keys = frontmatter![1]
+        .split(/\r?\n/)
+        .map((l) => l.split(":")[0].trim())
+        .filter(Boolean);
+      // `designer` and `mcp` restrict tools; `coder` / `auditor` include Bash.
+      // The invariant: the three frontmatter keys are name, description, tools.
+      expect(keys).toEqual(["name", "description", "tools"]);
+    }
   });
 
-  it("copies the real seed default-wizard-config.json into the generated project", async () => {
-    const out = path.join(tmp, "seed");
-    await scaffoldProject(baseConfig(), out);
-
-    const raw = await fs.readFile(
-      path.join(out, ".agents/default-wizard-config.json"),
-      "utf-8"
+  it("skill frontmatter exposes exactly name/description keys", async () => {
+    const out = path.join(tmp, "driftSkill");
+    await scaffoldProject(
+      baseConfig({ agents: ["coder", "designer", "auditor", "mcp"] }),
+      out
     );
-    const parsed = JSON.parse(raw);
-    // The real repo seed declares these connectors.
-    expect(parsed.mcpConnectors).toBeTruthy();
-    expect(Object.keys(parsed.mcpConnectors)).toEqual(
-      expect.arrayContaining(["supabase", "vercel", "stripe", "figma", "netlify"])
-    );
+    for (const agent of ["coder", "designer", "auditor", "mcp"]) {
+      const body = await fs.readFile(
+        path.join(out, `skills/${agent}/SKILL.md`),
+        "utf-8"
+      );
+      const frontmatter = body.match(/^---\n([\s\S]*?)\n---/);
+      expect(frontmatter, `${agent} SKILL.md frontmatter`).not.toBeNull();
+      const keys = frontmatter![1]
+        .split(/\r?\n/)
+        .map((l) => l.split(":")[0].trim())
+        .filter(Boolean);
+      expect(keys).toEqual(["name", "description"]);
+    }
   });
 });

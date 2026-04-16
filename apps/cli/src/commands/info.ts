@@ -54,8 +54,6 @@ export const infoCommand = new Command("info")
     console.log(pc.bold("defaults:"));
     if (d) {
       console.log(theme.muted(`  targetDir: ${d.targetDir}`));
-      console.log(theme.muted(`  scaffoldAgentsDir: ${d.scaffoldAgentsDir}`));
-      console.log(theme.muted(`  scaffoldPromptsDir: ${d.scaffoldPromptsDir}`));
     } else {
       console.log(theme.muted("  (none)"));
     }

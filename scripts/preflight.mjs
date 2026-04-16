@@ -18,6 +18,7 @@ const CHECKS = [
   { name: "placeholder-scan",      cmd: "node", args: [join(REPO_ROOT, "scripts", "placeholder-scan.mjs")] },
   { name: "check-no-self-dep",     cmd: "node", args: [join(REPO_ROOT, "scripts", "check-no-self-dep.mjs")] },
   { name: "check-non-tty-connectors", cmd: "node", args: [join(REPO_ROOT, "scripts", "check-non-tty-connectors.mjs")] },
+  { name: "check-no-multi-llm",    cmd: "node", args: [join(REPO_ROOT, "scripts", "check-no-multi-llm.mjs")] },
 ];
 
 function run(check) {

@@ -180,7 +180,7 @@ export const initCommand = new Command("init")
       const config = await buildWizardConfig(
         nonTtyAnswers,
         import.meta.url,
-        nonTtyAnswers.agents.includes("mcp") ? [] : undefined
+        [] // non-TTY never prompts for connectors; always empty regardless of agent selection
       );
       const sNonTty = p.spinner();
       sNonTty.start("Saving wizard configuration...");

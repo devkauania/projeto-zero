@@ -38,6 +38,20 @@ describe("filterConnectors", () => {
   });
 });
 
+// Regression guard for the non-TTY connector-default-ALL bug.
+// When the non-TTY path passed `undefined` as selectedConnectors, filterConnectors
+// returned the full seed map (all connectors written even when mcp was not selected).
+// The fix: non-TTY always passes `[]`. This test documents the unsafe vs safe call.
+describe("filterConnectors — non-TTY regression", () => {
+  it("undefined selectedIds returns all connectors (the bug scenario — must never reach buildWizardConfig)", () => {
+    expect(filterConnectors(connectors, undefined)).toEqual(connectors);
+  });
+
+  it("[] selectedIds returns empty object (the correct non-TTY behavior)", () => {
+    expect(filterConnectors(connectors, [])).toEqual({});
+  });
+});
+
 describe("buildWizardConfig", () => {
   it("hydrates from the real repo seed when walked up from this test file", async () => {
     const cfg = await buildWizardConfig(

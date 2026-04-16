@@ -15,7 +15,9 @@ const CHECKS = [
   { name: "files-exist",      cmd: "node", args: [join(REPO_ROOT, "scripts", "files-exist.mjs")] },
   { name: "pack-sanity",      cmd: "node", args: [join(REPO_ROOT, "scripts", "pack-sanity.mjs")] },
   { name: "repo-metadata",    cmd: "node", args: [join(REPO_ROOT, "scripts", "repo-metadata-check.mjs")] },
-  { name: "placeholder-scan", cmd: "node", args: [join(REPO_ROOT, "scripts", "placeholder-scan.mjs")] },
+  { name: "placeholder-scan",      cmd: "node", args: [join(REPO_ROOT, "scripts", "placeholder-scan.mjs")] },
+  { name: "check-no-self-dep",     cmd: "node", args: [join(REPO_ROOT, "scripts", "check-no-self-dep.mjs")] },
+  { name: "check-non-tty-connectors", cmd: "node", args: [join(REPO_ROOT, "scripts", "check-non-tty-connectors.mjs")] },
 ];
 
 function run(check) {

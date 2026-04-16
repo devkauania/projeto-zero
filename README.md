@@ -6,6 +6,8 @@
 
 Scaffolder and swarm launcher for [Claude Code](https://docs.claude.com/claude-code) agent workspaces. Ships as `@projeto-zero/cli` on npm.
 
+> **Code reviewers, start here:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — a guided tour of the interesting engineering decisions with code embedded inline (argv-array spawn, env allowlist, anti-gaming `--i-understand` gate, worktree path containment, config-dir hardening, mechanical gates).
+
 ```bash
 npx @projeto-zero/cli init
 ```

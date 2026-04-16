@@ -53,6 +53,9 @@ const IGNORED_FILES = new Set([
   join(".agents", "PROJECT_ROADMAP.md"),
   join(".agents", "antigravity-taxonomy.md"),
   join(".agents", "plano-sessoes-restantes.md"),
+  // Portfolio/architecture narrative — legitimately quotes gate names and
+  // scanned-for tokens as examples. Never shipped in the tarball.
+  join("docs", "ARCHITECTURE.md"),
   "CHANGELOG.md",
   // Root package.json references the npm script name "scan:placeholders".
   "package.json",

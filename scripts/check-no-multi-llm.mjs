@@ -49,6 +49,7 @@ const DENYLIST = [
 const EXCLUDED_PREFIXES = [
   "CHANGELOG.md",
   "docs/MIGRATION",
+  "docs/ARCHITECTURE.md", // narrative walkthrough — quotes the guard by name
   "audit/",
   ".agents/",
   ".claude/",

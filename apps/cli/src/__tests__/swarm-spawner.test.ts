@@ -64,11 +64,8 @@ describe("agent-spawner — argv-array only (anti-injection)", () => {
 
 describe("agent-spawner — missing-binary behavior (ENOENT)", () => {
   it("spawnClaudeAgent with a nonexistent binary fires 'error' (never hangs silently)", async () => {
-    // This locks the invariant the live-swarm loop in commands/swarm.ts
-    // depends on: child_process.spawn emits an 'error' event (not a
-    // synchronous throw) when the binary cannot be located. Without this
-    // guarantee, our Promise.all(exit|error) wiring would hang on
-    // missing-claude.
+    // Locks the invariant swarm --live depends on: spawn emits 'error'
+    // (not a sync throw) when the binary is missing.
     const { spawnClaudeAgent } = await import("../lib/swarm/agent-spawner.js");
     const tmpPrompt = path.join(
       path.dirname(SPAWNER_SRC),
@@ -77,8 +74,6 @@ describe("agent-spawner — missing-binary behavior (ENOENT)", () => {
       "__tests__",
       "fixtures-missing-prompt.txt"
     );
-    // Write a tiny prompt file on disk so the readFileSync stdin step
-    // doesn't fail before the spawn does.
     fs.writeFileSync(tmpPrompt, "irrelevant\n");
     try {
       const { proc } = spawnClaudeAgent({

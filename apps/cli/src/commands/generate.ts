@@ -15,8 +15,6 @@ export const generateCommand = new Command("generate")
     try {
       config = loadConfig();
     } catch (err) {
-      // ANTIGRAVITY_CONFIG_DIR rejection (ledger row 8) surfaces here as a
-      // user-facing message instead of a raw Node stack trace.
       p.log.error(theme.error(String(err instanceof Error ? err.message : err)));
       p.outro(theme.muted("Aborted."));
       process.exit(1);

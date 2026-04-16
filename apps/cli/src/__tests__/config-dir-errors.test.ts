@@ -1,14 +1,5 @@
-/**
- * Regression — ANTIGRAVITY_CONFIG_DIR scope-reject UX.
- *
- * Ledger row 8 (audit/patches/03-config-dir-hardening.md) hardens the
- * Conf store against an env-var pointed at an out-of-scope path. The
- * hardening itself is correct (throws from `validateConfigDir`), but
- * the first pass left `info`/`generate`/`reset` propagating the throw
- * as a raw Node stack trace. This suite locks the friendly-error UX:
- * every command must exit 1 with a one-line message and NO stack trace
- * when the env var is set to a path outside $HOME or $TMPDIR.
- */
+// Regression: ANTIGRAVITY_CONFIG_DIR out-of-scope must exit 1 with a
+// one-line message, never a raw Node stack trace. See audit/patches/06.
 
 import { describe, it, expect, beforeAll } from "vitest";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
@@ -19,8 +10,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const CLI_ENTRY = path.resolve(here, "..", "..", "dist", "index.js");
 
-// Path that is neither under os.homedir() nor os.tmpdir() on either
-// platform. validateConfigDir must reject it.
+// Neither under os.homedir() nor os.tmpdir() on either platform.
 const BAD_SCOPE =
   process.platform === "win32" ? "Z:\\pz-bad-scope" : "/opt/pz-bad-scope";
 
@@ -92,9 +82,5 @@ describe("ANTIGRAVITY_CONFIG_DIR out-of-scope — friendly error UX", { timeout:
     expect(combined).not.toMatch(NODE_THROW_RE);
   });
 
-  // Note: reset is TTY-gated and exits early with a warning under piped
-  // stdio — it never reaches loadConfig in this harness, so the throw
-  // path is exercised by the library-level config.test.ts tests. The
-  // inline try/catch added in commands/reset.ts protects interactive
-  // users; its failure mode is still a single friendly line.
+  // reset is TTY-gated — exercised at library level in config.test.ts.
 });

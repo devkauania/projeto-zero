@@ -295,12 +295,8 @@ export const swarmCommand = new Command("swarm")
         return s;
       });
 
-      // Wait for each agent's terminal event — whichever of "exit" or
-      // "error" fires first. Without the "error" branch, a missing
-      // `claude` binary (ENOENT on spawn) would leave Promise.all
-      // hanging forever while Node printed an unhandled-error warning.
-      // ledger row 4 envelope is still intact either way — the binary
-      // never runs — but the UX must be a friendly exit, not a hang.
+      // Resolve on whichever of "exit" or "error" fires first so a missing
+      // `claude` binary (ENOENT) exits friendly instead of hanging Promise.all.
       const failures: string[] = [];
       await Promise.all(
         plan.agents.map(

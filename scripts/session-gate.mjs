@@ -130,6 +130,93 @@ function checkGitClean(sessionN) {
   return false;
 }
 
+function checkVerificationArtifact() {
+  const vpath = join(REPO_ROOT, "apps", "cli", "VERIFICATION.md");
+  if (!existsSync(vpath)) {
+    log("SKIP", "verification-artifact", "apps/cli/VERIFICATION.md not present (pre-Stage-1)");
+    return true;
+  }
+  const body = readFileSync(vpath, "utf8");
+  const lines = body.split(/\r?\n/);
+
+  // Only scrutinize rows in the row table. The table header contains the
+  // column sequence "Feels right? | Bug? | Notes"; we key off that.
+  let inRowsTable = false;
+  const issues = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    // Detect the row-table header line.
+    if (!inRowsTable) {
+      if (/\|\s*Feels right\?\s*\|\s*Bug\?\s*\|\s*Notes\s*\|/.test(l)) {
+        inRowsTable = true;
+      }
+      continue;
+    }
+    if (!/^\|/.test(l)) continue; // exited table
+
+    // Skip the markdown divider row.
+    if (/^\|[\s:|-]+\|?\s*$/.test(l)) continue;
+
+    const cells = l.split("|").map((c) => c.trim());
+    // cells: ["", #, Feature, Invocation, Expected, Source, FeelsRight, Bug, Notes, ""]
+    if (cells.length < 10) continue;
+    const lineNo = i + 1;
+    const rowNum = cells[1];
+    const feels = cells[6];
+    const bug = cells[7];
+    const notes = cells[8];
+
+    // Rule 1: [!] in Bug column requires an issue or URL in Notes.
+    if (/\[!\]/.test(bug)) {
+      const hasIssue = /#\d+|https?:\/\//.test(notes);
+      if (!hasIssue) {
+        issues.push(`row ${rowNum} (line ${lineNo}): Bug=[!] but no #NNN or URL in Notes`);
+      }
+    }
+
+    // Rule 2: [x] in Feels right? must have been introduced by a non-LLM
+    // commit. Inspect the blame for this specific line.
+    if (/\[x\]/i.test(feels)) {
+      const blame = spawnSync(
+        "git",
+        ["blame", "-L", `${lineNo},${lineNo}`, "--porcelain", "apps/cli/VERIFICATION.md"],
+        { cwd: REPO_ROOT, encoding: "utf8", shell: true }
+      );
+      if (blame.status !== 0) {
+        issues.push(`row ${rowNum} (line ${lineNo}): git blame failed — cannot verify authorship`);
+        continue;
+      }
+      const sha = (blame.stdout.split(/\s+/)[0] || "").trim();
+      if (!sha || /^0+$/.test(sha)) {
+        // Uncommitted working-tree change — the user hasn't committed the
+        // flip yet. Gate must fail; otherwise an in-session LLM could flip
+        // boxes and claim victory without a paper trail.
+        issues.push(`row ${rowNum} (line ${lineNo}): Feels right=[x] in uncommitted working tree`);
+        continue;
+      }
+      const msg = spawnSync("git", ["log", "-1", "--format=%B", sha], {
+        cwd: REPO_ROOT, encoding: "utf8", shell: true,
+      });
+      if (msg.status !== 0) continue;
+      if (/Co-Authored-By:\s*Claude/i.test(msg.stdout)) {
+        issues.push(
+          `row ${rowNum} (line ${lineNo}): Feels right=[x] was introduced by LLM-co-authored commit ${sha.slice(0, 7)} — ` +
+          `anti-gaming tripwire. Only the human operator may flip this box.`
+        );
+      }
+    }
+  }
+
+  if (issues.length > 0) {
+    log("FAIL", "verification-artifact", `${issues.length} issue(s) in apps/cli/VERIFICATION.md`);
+    for (const it of issues) console.log(`  ${it}`);
+    return false;
+  }
+  log("PASS", "verification-artifact", "no unresolved [!] without issue link; no LLM-authored [x] flips");
+  return true;
+}
+
 function main() {
   const sessionN = detectSessionNumber();
   console.log(`session-gate: session = ${sessionN ?? "unknown"}`);
@@ -147,8 +234,9 @@ function main() {
   if (sessionN == null) log("FAIL", "session-detection", "could not infer session number");
 
   const gitOk = checkGitClean(sessionN);
+  const verOk = checkVerificationArtifact();
 
-  const ok = pre.ok && handoffOk && gitOk && sessionN != null;
+  const ok = pre.ok && handoffOk && gitOk && verOk && sessionN != null;
   console.log(`\nsession-gate: ${ok ? "PASS" : "FAIL"}`);
   process.exit(ok ? 0 : 1);
 }

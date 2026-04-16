@@ -29,6 +29,10 @@ const IGNORED_DIR_PREFIXES = [
   join(".agents", "validations"),
   // Session handoffs — narrative documents about past sessions.
   join(".agents", "handoffs"),
+  // Security audit reports — narrative documents that legitimately quote
+  // gate/check names (e.g., "placeholder-scan PASS") as evidence. Never
+  // shipped: apps/cli/package.json files[] = ["dist", "README.md"].
+  "audit",
 ];
 
 const IGNORED_FILES = new Set([

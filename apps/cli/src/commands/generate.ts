@@ -11,7 +11,16 @@ export const generateCommand = new Command("generate")
   .action(async (options) => {
     p.intro(pc.inverse(" Code Generation "));
 
-    const config = loadConfig();
+    let config;
+    try {
+      config = loadConfig();
+    } catch (err) {
+      // ANTIGRAVITY_CONFIG_DIR rejection (ledger row 8) surfaces here as a
+      // user-facing message instead of a raw Node stack trace.
+      p.log.error(theme.error(String(err instanceof Error ? err.message : err)));
+      p.outro(theme.muted("Aborted."));
+      process.exit(1);
+    }
 
     if (!config) {
       p.note(

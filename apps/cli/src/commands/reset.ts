@@ -14,7 +14,16 @@ export const resetCommand = new Command("reset")
 
     p.intro(pc.bgRed(pc.white(" DANGER ZONE ")));
 
-    const existing = loadConfig();
+    let existing;
+    try {
+      existing = loadConfig();
+    } catch (err) {
+      // ANTIGRAVITY_CONFIG_DIR rejection (ledger row 8) surfaces here as a
+      // user-facing message instead of a raw Node stack trace.
+      p.log.error(theme.error(String(err instanceof Error ? err.message : err)));
+      p.outro(theme.muted("Aborted."));
+      process.exit(1);
+    }
     if (!existing) {
       p.note(theme.muted("No configuration to clear."), "Nothing to do");
       p.outro(theme.muted("Reset skipped."));

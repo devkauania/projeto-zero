@@ -47,6 +47,11 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - v1.0.0 self-dependency in `apps/cli/package.json` (CI guard now enforces).
 - v1.0.0 README artifact count mismatch (already patched in 8816c59).
+- `info`, `generate`, and `reset` now surface a friendly one-line error
+  (no stack trace) when `ANTIGRAVITY_CONFIG_DIR` is set to a path outside
+  `$HOME` or `$TMPDIR`. The scope-confinement throw (ledger row 8) was
+  already correct; this completes the UX side. Caught in Phase 2 E2E
+  recon (`audit/phase2-e2e-v1.1.0.md`); see `audit/patches/06`.
 
 ### Security
 - Vulnerability ledger rows 4, 5, 6, 7, 8, 9, 11, 12 all closed with patch

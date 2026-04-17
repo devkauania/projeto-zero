@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-04-16
+
+Post-release E2E polish pass. Docs-and-copy patch surfaced by a fresh
+`npx -y @projeto-zero/cli@1.1.0 init/generate/swarm` sandbox run on Windows
+PowerShell 5.x. No product-logic changes, no public API changes.
+
+### Changed
+- Wizard copy: the `includeTemplates` prompt now reads "Include Claude Code
+  subagent + skill template files?" (was "Generate .agents/ prompt templates?",
+  which misleadingly suggested it would populate `.agents/prompts/*.md` when it
+  actually controls whether `.agents/<id>.md` and `skills/<id>/SKILL.md` are
+  written).
+- `apps/cli/README.md` invocation examples now lead with
+  `npx -y @projeto-zero/cli <cmd>` as the primary form. The `antigravity`
+  binary is still shipped (back-compat) and documented as an alias available
+  after a global install.
+- `apps/cli/README.md` example trace corrected to "Created 6 artifacts" for the
+  two-agent (`coder` + `auditor`) + templates-enabled flow (formula: `2 + 2N`).
+  Prior README said 4, which did not match the shipped `generate` output.
+- `scaffoldProject` renders `CLAUDE.md` with ASCII hyphens instead of em-dashes
+  so the file displays correctly under Windows PowerShell 5.x's default
+  Windows-1252 decoder (the file was always valid UTF-8; this is a render-time
+  compatibility fix for the most common Windows shell).
+
+### Notes
+- `ANTIGRAVITY_CONFIG_DIR` env var name retained for back-compat with existing
+  CI pipelines. Renaming is tracked as a breaking change for a future major.
+- `.agents/*.md` and `skills/*/SKILL.md` template contents still contain
+  em-dashes; a fresh `Get-Content` on those in PowerShell 5.x will show the
+  same mojibake. Scope-limited to `CLAUDE.md` for v1.1.1 — full ASCII sweep
+  deferred.
+
 ## [1.1.0] — 2026-04-16
 
 ### Added

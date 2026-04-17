@@ -233,7 +233,7 @@ export const initCommand = new Command("init")
         },
         includeTemplates: () =>
           p.confirm({
-            message: "Generate .agents/ prompt templates?",
+            message: "Include Claude Code subagent + skill template files?",
             initialValue: true,
           }),
       },

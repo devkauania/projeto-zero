@@ -209,8 +209,8 @@ description: Invoke when the user wants to add, remove, or debug MCP connectors 
 };
 
 function renderClaudeMd(projectName: string, agents: string[]): string {
-  const subagentList = agents.map((a) => `- \`${a}\` — see \`.agents/${a}.md\``).join("\n");
-  const skillList = agents.map((a) => `- \`${a}\` — see \`skills/${a}/SKILL.md\``).join("\n");
+  const subagentList = agents.map((a) => `- \`${a}\` - see \`.agents/${a}.md\``).join("\n");
+  const skillList = agents.map((a) => `- \`${a}\` - see \`skills/${a}/SKILL.md\``).join("\n");
   return `# ${projectName}
 
 This is a Claude Code workspace scaffolded by \`@projeto-zero/cli\`.
@@ -225,7 +225,7 @@ ${skillList}
 _Describe project-wide conventions here (code style, commit format, review process)._
 
 ## How to work
-_Describe the agreed workflow — e.g., coder implements, auditor runs tests, designer for UI._
+_Describe the agreed workflow - e.g., coder implements, auditor runs tests, designer for UI._
 `;
 }
 

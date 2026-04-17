@@ -2,7 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.1] - 2026-04-16
+## [1.1.2] - 2026-04-16
+
+Re-release of the v1.1.1 content. The v1.1.1 tag was pushed but the OIDC
+publish workflow failed at `npm ci` because the root `package-lock.json`
+still referenced a pre-publish self-dep `file:projeto-zero-cli-0.1.0.tgz`
+(a tarball that had been deleted from the repo tree). Lockfile regenerated
+from a clean `npm install`, resolving 112 packages with integrity hashes.
+No product-logic changes on top of the v1.1.1 intended content below.
+
+### Fixed
+- `package-lock.json`: regenerated to remove stale `file:projeto-zero-cli-0.1.0.tgz`
+  self-dep reference that caused CI `npm ci` to ENOENT on the v1.1.1 tag.
+- Workspace version in lockfile now tracks `apps/cli/package.json` (1.1.2).
+
+## [1.1.1] - 2026-04-16 (unreleased - CI failed, superseded by 1.1.2)
 
 Post-release E2E polish pass. Docs-and-copy patch surfaced by a fresh
 `npx -y @projeto-zero/cli@1.1.0 init/generate/swarm` sandbox run on Windows

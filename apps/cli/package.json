@@ -1,6 +1,6 @@
 {
   "name": "@projeto-zero/cli",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "CLI scaffolder and swarm launcher for Claude Code agent workspaces",
   "type": "module",
   "main": "./dist/index.js",

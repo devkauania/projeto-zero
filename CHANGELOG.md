@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-04-17
+
+Re-release of v1.1.2 content. The v1.1.2 tag passed `npm ci`, preflight,
+build, test, and provenance signing, but the final `npm publish` PUT
+returned 404 because Trusted Publisher was never configured on npmjs.com
+for this scope (deferred from v1.1.0 release — ledger row 10). Setting
+up Trusted Publisher via the npm web UI requires the account 2FA
+security key, which is not available.
+
+Fallback: the `Release` workflow's publish step now authenticates via
+`NPM_TOKEN` repo secret (granular access token with bypass-2FA + scope
+write). Provenance attestation is retained — the OIDC identity for
+provenance is independent of npm auth.
+
+### Fixed
+- `.github/workflows/release.yml`: publish step now sets `NODE_AUTH_TOKEN`
+  from `secrets.NPM_TOKEN` so auth does not depend on the npm Trusted
+  Publisher binding that could not be configured due to the 2FA security
+  key blocker.
+
+### Notes
+- Trusted Publisher remains the preferred long-term auth method — when
+  the security key availability is resolved, the `env: NODE_AUTH_TOKEN`
+  block can be deleted and the workflow will fall back to OIDC with no
+  other changes.
+- v1.1.1 and v1.1.2 tags remain in the repo as markers of the two
+  failed publish attempts (ENOENT on stale lockfile, and the 404 above).
+  Neither was ever on npm, so no back-compat promise was made.
+
 ## [1.1.2] - 2026-04-16
 
 Re-release of the v1.1.1 content. The v1.1.1 tag was pushed but the OIDC

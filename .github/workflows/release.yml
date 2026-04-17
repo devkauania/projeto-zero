@@ -40,3 +40,5 @@ jobs:
       - name: Publish with provenance
         working-directory: apps/cli
         run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

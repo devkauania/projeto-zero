@@ -19,7 +19,9 @@ const PLACEHOLDER_PATTERN = new RegExp(
   "i"
 );
 
-const REPO_URL_RE = /^https:\/\/github\.com\/[^/]+\/[^/]+\.git$/;
+// npm normalizes to `git+https://…` on publish; accept both to avoid a
+// publish-warning/gate-fail round-trip when `npm pkg fix` prefixes git+.
+const REPO_URL_RE = /^(git\+)?https:\/\/github\.com\/[^/]+\/[^/]+\.git$/;
 
 function checkEnginesNode(spec) {
   if (typeof spec !== "string") return false;
@@ -52,7 +54,7 @@ function main() {
     problems.push("missing repository.url");
   } else {
     if (!REPO_URL_RE.test(repoUrl)) {
-      problems.push(`repository.url '${repoUrl}' does not match ^https://github.com/<owner>/<repo>.git$`);
+      problems.push(`repository.url '${repoUrl}' does not match ^(git+)?https://github.com/<owner>/<repo>.git$`);
     }
     if (PLACEHOLDER_PATTERN.test(repoUrl)) {
       problems.push(`repository.url '${repoUrl}' matches placeholder regex (rule R12)`);

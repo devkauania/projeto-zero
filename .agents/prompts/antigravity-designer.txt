@@ -12,7 +12,7 @@ that the next agent has to restructure.
 
 **Constraints:**
 1. **Skills mandatory:** you MUST read and use the skills at
-   `C:\Users\Administrador\.agents\skills\` before any UI work. Read their
+   `<home>/.agents/skills/` before any UI work. Read their
    `SKILL.md` protocols first.
 2. **Design + Stitch:** always use `design-md` to generate visual docs and
    Stitch prompts, and `stitch-design` to plan architecture before code.

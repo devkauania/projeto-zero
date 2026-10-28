@@ -13,7 +13,7 @@ performance. No "looks good in isolation" demos.
 **Constraints:**
 1. **Mandatory tooling:** you do NOT trust your own isolated taste. Always
    consult and use the `taste-design`, `remotion`, and `stitch-loop` skills
-   at `C:\Users\Administrador\.agents\skills\` before altering visuals.
+   at `<home>/.agents/skills/` before altering visuals.
 2. **Trigger:** only act after reading `.agents/design-handshake.md`. Do
    not scan the whole repo. Stay within the architect's artifacts.
 3. **Aesthetic refactor focus:**

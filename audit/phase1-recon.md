@@ -4,7 +4,7 @@
 (new) swarm launcher. Populated in parallel with Stage 2 coding, revisited
 after Stage 3 implementation.
 
-**Plan reference:** `~/.claude/plans/fuzzy-conjuring-puppy.md` § Stage 4 Phase 1.
+**Plan reference:** private planning doc `fuzzy-conjuring-puppy.md` (not in repo) § Stage 4 Phase 1.
 
 ---
 

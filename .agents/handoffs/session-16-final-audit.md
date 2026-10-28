@@ -86,7 +86,7 @@ Figlet banner rendered, clack intro + spinner check printed, exit 0.
 [?25l[90m│[39m
 [32m◇[39m  Scaffold completed!
 [?25h[90m│[39m
-[32m◆[39m  [32mCreated 7 artifacts[39m [2min C:/Users/ADMINI~1/AppData/Local/Temp/audit-s16/audit-output[22m
+[32m◆[39m  [32mCreated 7 artifacts[39m [2min <tmp>/audit-s16/audit-output[22m
 [90m│[39m
 [90m└[39m  [32mGenerated 7 artifacts in the target directory.[39m
 ```
@@ -251,7 +251,7 @@ found 0 vulnerabilities
 @projeto-zero/cli:build: > @projeto-zero/cli@0.1.0 build
 @projeto-zero/cli:build: > tsc && node scripts/copy-seed.mjs
 @projeto-zero/cli:build:
-@projeto-zero/cli:build: [copy-seed] C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\default-wizard-config.json -> C:\Users\Administrador\Documents\GitHub\Projeto-Zero\apps\cli\dist\default-wizard-config.json
+@projeto-zero/cli:build: [copy-seed] <repo>\.agents\default-wizard-config.json -> <repo>\apps\cli\dist\default-wizard-config.json
 
  Tasks:    1 successful, 1 total
 Cached:    1 cached, 1 total
@@ -289,7 +289,7 @@ Cached:    1 cached, 1 total
 @projeto-zero/cli:test: > vitest run
 @projeto-zero/cli:test:
 @projeto-zero/cli:test:
-@projeto-zero/cli:test: RUN v4.1.3 C:/Users/Administrador/Documents/GitHub/Projeto-Zero/apps/cli
+@projeto-zero/cli:test: RUN v4.1.3 <repo>/apps/cli
 @projeto-zero/cli:test:
 @projeto-zero/cli:test:  ✓ src/__tests__/fs-utils.test.ts        (11 tests)  70ms
 @projeto-zero/cli:test:  ✓ src/__tests__/init-helpers.test.ts     (7 tests)   14ms
@@ -365,7 +365,7 @@ All 8 mission bullets: **DONE**.
 ```
 session-gate: session = 16
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\handoffs\session-16-final-audit.md
+PASS handoff-exists — <repo>\.agents\handoffs\session-16-final-audit.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok
@@ -394,7 +394,7 @@ Full literal output of `node scripts/verdict.mjs` (exit 0):
 @projeto-zero/cli:build: > @projeto-zero/cli@0.1.0 build
 @projeto-zero/cli:build: > tsc && node scripts/copy-seed.mjs
 @projeto-zero/cli:build:
-@projeto-zero/cli:build: [copy-seed] C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\default-wizard-config.json -> C:\Users\Administrador\Documents\GitHub\Projeto-Zero\apps\cli\dist\default-wizard-config.json
+@projeto-zero/cli:build: [copy-seed] <repo>\.agents\default-wizard-config.json -> <repo>\apps\cli\dist\default-wizard-config.json
 
  Tasks:    1 successful, 1 total
 Cached:    1 cached, 1 total
@@ -438,7 +438,7 @@ Cached:    1 cached, 1 total
 @projeto-zero/cli:test: > vitest run
 @projeto-zero/cli:test:
 @projeto-zero/cli:test:
-@projeto-zero/cli:test: RUN v4.1.3 C:/Users/Administrador/Documents/GitHub/Projeto-Zero/apps/cli
+@projeto-zero/cli:test: RUN v4.1.3 <repo>/apps/cli
 @projeto-zero/cli:test:
 @projeto-zero/cli:test:  ✓ src/__tests__/fs-utils.test.ts        (11 tests)  70ms
 @projeto-zero/cli:test:  ✓ src/__tests__/init-helpers.test.ts     (7 tests)   14ms

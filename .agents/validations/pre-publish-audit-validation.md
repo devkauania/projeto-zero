@@ -282,7 +282,7 @@ All 7 checks green. ✓
 From `cd apps/cli && npm test`:
 
 ```
- RUN  v4.1.3 C:/Users/Administrador/Documents/GitHub/Projeto-Zero/apps/cli
+ RUN  v4.1.3 <repo>/apps/cli
 
  Test Files  8 passed (8)
       Tests  48 passed (48)
@@ -390,7 +390,7 @@ includeTemplates: yes
 │
 ◇  Scaffold completed!
 │
-◆  Created 5 artifacts in C:/Users/ADMINI~1/AppData/Local/Temp/antigravity-audit-BzWWNH/out-test-dir
+◆  Created 5 artifacts in <tmp>/antigravity-audit-BzWWNH/out-test-dir
 │
 └  Generated 5 artifacts in the target directory.
 ```
@@ -488,7 +488,7 @@ Per-platform evidence count:
 
 C4 as stated by the prompt PASSES: "each platform has literal command output attributed to it". ✓
 
-**Caveat (not a tripwire; flagged as follow-up #1 in §10):** the report's first line declares `Tarball: projeto-zero-cli-0.1.0.tgz (17.7 kB, 43 files)` and the banner inside the report output says `v0.1.0`. The current tarball is `1.0.0` with 48 files. The 5-file delta is `LICENSE` + `dist/lib/version.*` (the version-SSOT refactor). No functional runtime behavior changed between 0.1.0 and 1.0.0 that would be platform-sensitive. The present audit independently re-verified the round-trip on Windows (§4.B7) with identical behavior (5 artifacts, ANSI rendered, figlet drawn, paths with spaces implicitly via `C:/Users/ADMINI~1/…`). Cross-platform risk at 1.0.0 is very low but not *re-tested*.
+**Caveat (not a tripwire; flagged as follow-up #1 in §10):** the report's first line declares `Tarball: projeto-zero-cli-0.1.0.tgz (17.7 kB, 43 files)` and the banner inside the report output says `v0.1.0`. The current tarball is `1.0.0` with 48 files. The 5-file delta is `LICENSE` + `dist/lib/version.*` (the version-SSOT refactor). No functional runtime behavior changed between 0.1.0 and 1.0.0 that would be platform-sensitive. The present audit independently re-verified the round-trip on Windows (§4.B7) with identical behavior (5 artifacts, ANSI rendered, figlet drawn, paths with spaces implicitly via an 8.3 short-name temp path (`<tmp>/…`)). Cross-platform risk at 1.0.0 is very low but not *re-tested*.
 
 ### C5 — governance alignment (3 confirmations)
 
@@ -519,7 +519,7 @@ Both branches literally present (R11 at lines 63/68, R17(c) at lines 135/141). �
 **(c)** `.agents/handoffs/session-17-blockers.md` exists in the `handoffs/` subdirectory (NOT at `.agents/` root, resolving MF-1):
 ```
 $ ls .agents/handoffs/session-17-blockers.md
--rw-r--r-- 1 Administrador 197121 ... session-17-blockers.md
+-rw-r--r-- 1 <user> 197121 ... session-17-blockers.md
 
 $ ls .agents/session-17-blockers.md
 ls: cannot access '.agents/session-17-blockers.md': No such file or directory
@@ -633,14 +633,14 @@ Three claims from this deliverable picked at random, verified against literal pa
 Three file paths referenced in this deliverable, `ls`'d:
 
 ```
-$ ls -la /c/Users/Administrador/Documents/GitHub/Projeto-Zero/apps/cli/dist/index.js
+$ ls -la <repo>/apps/cli/dist/index.js
 -rw-r--r-- ... dist/index.js   (exists, size 650)
 
-$ ls -la /c/Users/Administrador/Documents/GitHub/Projeto-Zero/.agents/handoffs/cross-platform-report.md
--rw-r--r-- 1 Administrador 197121 9785 Apr 14 10:14 .../cross-platform-report.md
+$ ls -la <repo>/.agents/handoffs/cross-platform-report.md
+-rw-r--r-- 1 <user> 197121 9785 Apr 14 10:14 .../cross-platform-report.md
 
-$ ls -la /c/Users/Administrador/Documents/GitHub/Projeto-Zero/.agents/validations/milestone-b-validation.md
--rw-r--r-- 1 Administrador 197121 34621 Apr 14 17:27 .../milestone-b-validation.md
+$ ls -la <repo>/.agents/validations/milestone-b-validation.md
+-rw-r--r-- 1 <user> 197121 34621 Apr 14 17:27 .../milestone-b-validation.md
 ```
 
 All three present and non-empty. **Verdict: PASS.**
@@ -685,7 +685,7 @@ Full literal output of `node scripts/session-gate.mjs`:
 ```
 session-gate: session = 17
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\handoffs\session-17-blockers.md
+PASS handoff-exists — <repo>\.agents\handoffs\session-17-blockers.md
 FAIL self-grading-table — missing ## Self-Grading Table
 FAIL gate-transcript — missing ## Gate Transcript
 PASS grading-vs-verdict — ok

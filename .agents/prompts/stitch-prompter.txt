@@ -10,7 +10,7 @@ pass. Incomplete briefs become rework downstream.
 **Constraints:**
 1. **Mandatory tooling:** for every new screen/component request, you MUST
    run the `design-md` and `enhance-prompt` skills at
-   `C:\Users\Administrador\.agents\skills\`.
+   `<home>/.agents/skills/`.
 2. **Process:** always start by reading `.agents/design-handshake.md`.
    Extract semantics, use `design-md` hooks, refine copy with `enhance-prompt`.
 

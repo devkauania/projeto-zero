@@ -40,7 +40,7 @@ under `apps/cli/src/__tests__/` and any other command/lib file beyond
 ```
 session-gate: session = 14
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\session-14a-error-path-tests.md
+PASS handoff-exists — <repo>\.agents\session-14a-error-path-tests.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok

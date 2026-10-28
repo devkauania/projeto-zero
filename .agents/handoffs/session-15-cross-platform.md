@@ -33,7 +33,7 @@ Cross-platform E2E verification of `@projeto-zero/cli@0.1.0` tarball on Windows 
 ```
 session-gate: session = 15
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\handoffs\session-15-cross-platform.md
+PASS handoff-exists — <repo>\.agents\handoffs\session-15-cross-platform.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok

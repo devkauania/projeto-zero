@@ -36,7 +36,7 @@ FAIL placeholder-scan: 1 hit(s):
 
 preflight: FAILED (files-exist, pack-sanity, repo-metadata, placeholder-scan)
 --- end preflight output ---
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\process-hardening.md
+PASS handoff-exists — <repo>\.agents\process-hardening.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok

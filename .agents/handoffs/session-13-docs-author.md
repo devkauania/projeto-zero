@@ -21,7 +21,7 @@ Wrote `apps/cli/README.md` containing installation instructions, complete usage,
 ```text
 session-gate: session = 13
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\session-13-docs-author.md
+PASS handoff-exists — <repo>\.agents\session-13-docs-author.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok

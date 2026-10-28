@@ -1,7 +1,7 @@
 # Phase 1 Recon — v1.1.0 Clean Cycle
 
 **Date:** 2026-04-16
-**Plan:** `~/.claude/plans/fuzzy-conjuring-puppy.md` § Stage 6 "final recon cycle"
+**Plan:** private planning doc `fuzzy-conjuring-puppy.md` (not in repo) § Stage 6 "final recon cycle"
 **Purpose:** Re-run the Stage 4 Phase 1 attack-surface analysis on the code
 that will ship as `@projeto-zero/cli@1.1.0`. Gate per rule 7 of Phase 3:
 the v1.1.0 tag is only cut after one clean recon cycle — no new Critical

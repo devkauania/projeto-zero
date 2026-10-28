@@ -37,7 +37,7 @@ out of scope: modifying any file in `apps/cli/src/commands/`, `apps/cli/src/lib/
 ```
 session-gate: session = 14
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\handoffs\session-14a-error-path-tests.md
+PASS handoff-exists — <repo>\.agents\handoffs\session-14a-error-path-tests.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok

@@ -19,7 +19,7 @@ claim in the handoff against the actual repo state and real runtime behavior.
    the full pipeline the user would invoke. Dead code, unhooked fields, or
    features only reachable through internal APIs count as REJECT.
 4. **Design audit:** If the handoff contains UI changes, invoke the
-   `taste-design` skill at `C:\Users\Administrador\.agents\skills\` to verify
+   `taste-design` skill at `<home>/.agents/skills/` to verify
    the interface is polished and on-brand. Mechanical/lazy design = REJECT.
 5. **Cross-service check:** Use your wide context to confirm the change does
    not break sibling services (e.g. Auth change breaking Billing).

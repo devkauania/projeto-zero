@@ -66,7 +66,7 @@ Session 14a delivered part 1 of an R13-split deliverable: writing FAILING accept
 
 **Check 4 - Vitest Execution**
 ```
-PS C:\Users\Administrador\Documents\GitHub\Projeto-Zero\apps\cli> npx vitest run src/__tests__/error-paths.test.ts
+PS <repo>\apps\cli> npx vitest run src/__tests__/error-paths.test.ts
 ...
       Tests 4 failed | 2 passed (6)
    Start at 20:00:00
@@ -74,7 +74,7 @@ PS C:\Users\Administrador\Documents\GitHub\Projeto-Zero\apps\cli> npx vitest run
 
 **Check 7 - Gate Script Execution**
 ```
-PS C:\Users\Administrador\Documents\GitHub\Projeto-Zero> $env:SESSION_NUMBER="14"; node scripts/session-gate.mjs
+PS <repo>> $env:SESSION_NUMBER="14"; node scripts/session-gate.mjs
 session-gate: session = 14
 FAIL preflight (test)
 PASS handoff-exists — .agents/session-14a-error-path-tests.md
@@ -88,7 +88,7 @@ session-gate: FAIL
 
 **Check 8 - Verdict Script**
 ```
-PS C:\Users\Administrador\Documents\GitHub\Projeto-Zero> node scripts/verdict.mjs
+PS <repo>> node scripts/verdict.mjs
 NOT-READY: test
 ```
 

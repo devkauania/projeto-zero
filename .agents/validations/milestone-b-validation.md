@@ -146,7 +146,7 @@ Exit code: **1 (NOT-READY)**
 @projeto-zero/cli:build: > @projeto-zero/cli@0.1.0 build
 @projeto-zero/cli:build: > tsc && node scripts/copy-seed.mjs
 @projeto-zero/cli:build:
-@projeto-zero/cli:build: [copy-seed] C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\default-wizard-config.json -> C:\Users\Administrador\Documents\GitHub\Projeto-Zero\apps\cli\dist\default-wizard-config.json
+@projeto-zero/cli:build: [copy-seed] <repo>\.agents\default-wizard-config.json -> <repo>\apps\cli\dist\default-wizard-config.json
 
  Tasks:    1 successful, 1 total
 Cached:    1 cached, 1 total
@@ -189,7 +189,7 @@ Cached:    1 cached, 1 total
 @projeto-zero/cli:test: > @projeto-zero/cli@0.1.0 test
 @projeto-zero/cli:test: > vitest run
 @projeto-zero/cli:test:
-@projeto-zero/cli:test:  RUN  v4.1.3 C:/Users/Administrador/Documents/GitHub/Projeto-Zero/apps/cli
+@projeto-zero/cli:test:  RUN  v4.1.3 <repo>/apps/cli
 @projeto-zero/cli:test:
 @projeto-zero/cli:test:  ✓ src/__tests__/fs-utils.test.ts        (11 tests)  70ms
 @projeto-zero/cli:test:  ✓ src/__tests__/init-helpers.test.ts     (7 tests)  14ms
@@ -303,7 +303,7 @@ Per `.agents/antigravity-taxonomy.md` §4 and the Milestone B prompt §Adversari
 
 > *"For each test described as 'executed' in the Session 16 handoff, verify that the full literal output was pasted (not just 'all tests pass')."*
 
-**Check:** Grep `C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\handoffs` for strings `all tests pass`, `technically compiles`, `verified` (case-insensitive).
+**Check:** Grep `<repo>\.agents\handoffs` for strings `all tests pass`, `technically compiles`, `verified` (case-insensitive).
 
 **Result:**
 - `all tests pass` / `all tests passed`: only Session 07 handoff ("All tests passed gracefully") — narrative about a different session, not a substitute for evidence in Session 15/16.

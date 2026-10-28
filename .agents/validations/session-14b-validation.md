@@ -7,7 +7,7 @@ Validating Session 14b (@ErrorPathFixer). Checked that the error-path tests writ
 ```text
 session-gate: session = 14
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\session-14a-error-path-tests.md
+PASS handoff-exists — <repo>\.agents\session-14a-error-path-tests.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok

@@ -7,7 +7,7 @@ Validating Session 13 (@DocsAuthor). Checked documentation requirements and `pac
 ```text
 session-gate: session = 13
 PASS preflight — all checks green
-PASS handoff-exists — C:\Users\Administrador\Documents\GitHub\Projeto-Zero\.agents\session-13-docs-author.md
+PASS handoff-exists — <repo>\.agents\session-13-docs-author.md
 PASS self-grading-table — present
 PASS gate-transcript — present
 PASS grading-vs-verdict — ok

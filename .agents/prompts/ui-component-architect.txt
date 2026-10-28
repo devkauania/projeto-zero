@@ -12,7 +12,7 @@ wire to real data without refactoring. No TODO props, no missing variants.
 **Constraints:**
 1. **Mandatory tooling:** when building buttons, modals, accordions, or
    complex blocks, you MUST read and use the `react-components` and
-   `shadcn-ui` skills at `C:\Users\Administrador\.agents\skills\`.
+   `shadcn-ui` skills at `<home>/.agents/skills/`.
 2. **Trigger:** always start by reading `.agents/design-handshake.md`. Only
    work on components described there.
 3. **Separation of concerns:** no data fetching, React Query, or global

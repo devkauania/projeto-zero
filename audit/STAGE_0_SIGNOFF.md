@@ -2,7 +2,7 @@
 
 **Purpose:** Mechanical gate before any v1.1.0 coding begins. Each row requires user initials. Session-gate fails if any row is unchecked on HEAD.
 
-**Plan reference:** `C:\Users\Administrador\.claude\plans\fuzzy-conjuring-puppy.md` § Stage 0.
+**Plan reference:** private planning doc `fuzzy-conjuring-puppy.md` (not in repo) § Stage 0.
 
 ---
 

@@ -162,7 +162,7 @@ Formula: `2 + 2N` artifacts — `CLAUDE.md` + `.agents/prompts/.gitkeep` + one `
 You are trying to execute `generate` or `info` before establishing the configuration state. **Solution**: Simply run `npx -y @projeto-zero/cli init` to configure the wizard.
 
 ### My setup failed for an unknown directory error
-The `generate` command natively handles formatting against any path you provide, but if the location lacks write privileges or hits Windows OS restrictions cross-environment, you will observe an error trace. Provide an access-level path such as `-d ./` or an elevated terminal check.
+`generate` writes into whatever directory you pass with `-d`. If that location is not writable (permissions, or Windows protected folders), it fails with an error trace. Point it at a directory you own, such as `-d ./`.
 
 ### State mismatch crossing directories
 Since the CLI saves state locally on your machine, running `init` on one project and `generate` without re-running `init` across another repo will inherit the previous config values. Use `npx -y @projeto-zero/cli reset` to safely purge settings before pivoting scopes.

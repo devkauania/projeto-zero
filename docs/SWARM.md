@@ -52,8 +52,8 @@ against a recorded list of real Claude Code CLI flags
 | `--permission-mode` | `acceptEdits` (work) / `plan` (verify) | `bypassPermissions` requires both `--permission-mode bypassPermissions` AND `--i-understand` at the top-level CLI. Verify mode is always read-only. |
 | `--allowed-tools` | `Read Write Edit Bash(git:*) Bash(npm:*)` | Calls Claude Code auto-approves without asking. This does not restrict other tools by itself. Verify mode always uses `Read Grep Glob Bash(git diff:*)`. Note that `Bash(npm:*)` runs any package script, i.e. arbitrary code. |
 | `--disallowed-tools` | `Bash(rm:*) Bash(curl:*) Bash(wget:*) Bash(ssh:*) WebFetch WebSearch` | Deny rules. `WebFetch`/`WebSearch` remove those tools entirely; the `Bash(...)` rules refuse commands that start with that text. A speed bump, **not a sandbox** (see below). |
-| `--max-turns` | `20` | Per-agent turn cap. |
-| `--max-budget-usd` | `5.00` | Per-agent USD cap. |
+| `--max-turns` | `20` | Per-agent turn cap. Must be a whole number >= 1; anything else is refused. |
+| `--max-budget-usd` | `5.00` | Per-agent USD cap. Must be a number >= 0.01 written with a dot (`0.50`, not `0,50`); anything else is refused rather than replaced by the default. |
 | `--output-format` | `stream-json` | Machine-parseable. The live renderer streams each line with an `[agent-N]` prefix and also parses it to decide success (see below). The `--max-budget-usd` value is passed through to each child `claude` process; the launcher itself does not track spend. |
 | working directory (spawn `cwd`) | `.claude/worktrees/<swarm-id>/agent-<n>` | Each agent starts in its own git worktree. This is a starting directory, not a sandbox: Claude Code can still be asked to touch paths outside it. |
 | child env | Allowlist of 11 variables (`PATH`, `HOME`, `CLAUDE_CODE_OAUTH_TOKEN`, …) | `NPM_TOKEN`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, and every other parent env var are stripped before spawn. |

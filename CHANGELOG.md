@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- `swarm --max-budget-usd` and `--max-turns` silently replaced values they
+  could not use with the defaults. `--max-budget-usd 0,5` (comma decimal),
+  `0` or `abc` became a 5.00 USD cap per agent, a higher spend limit than the
+  one asked for; `--max-turns 0` or `x` became 20, and `--max-turns 1.5` was
+  passed to Claude Code as-is. Both flags are now validated (budget: a
+  number >= 0.01 with a dot; turns: a whole number >= 1) and the command
+  exits 1 with a clear message otherwise. Swarm errors also no longer print
+  a doubled `swarm: swarm:` prefix.
 - `swarm --live` could never run an agent and still reported success. The
   safety envelope emitted `--temperature`, `--working-dir` and
   `--prompt-file`, which do not exist in Claude Code (the child exits 1 with

@@ -72,6 +72,40 @@ function parsePermissionMode(
   );
 }
 
+/**
+ * Parse `--max-turns`. Must be a whole number >= 1. Invalid input is
+ * refused instead of silently falling back to the default (before, "x" or
+ * "0" became 20 turns and "1.5" was passed through to Claude Code as-is).
+ */
+export function parseMaxTurns(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const n = Number(raw.trim());
+  if (raw.trim() === "" || !Number.isInteger(n) || n < 1) {
+    throw new Error(
+      `swarm: --max-turns must be a whole number >= 1, got "${raw}"`
+    );
+  }
+  return n;
+}
+
+/**
+ * Parse `--max-budget-usd`. Must be a plain decimal number >= 0.01 (use a
+ * dot as the decimal separator). Invalid input is refused: before, values
+ * such as "0,5", "0" or "abc" silently became the 5.00 default, i.e. a
+ * higher spend cap than the operator asked for.
+ */
+export function parseMaxBudgetUsd(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const trimmed = raw.trim();
+  const n = Number(trimmed);
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed) || !Number.isFinite(n) || n < 0.01) {
+    throw new Error(
+      `swarm: --max-budget-usd must be a number >= 0.01 with a dot as decimal separator (e.g. 0.50), got "${raw}"`
+    );
+  }
+  return n;
+}
+
 function parseList(raw: string | undefined): string[] | undefined {
   if (raw === undefined) return undefined;
   return raw
@@ -222,10 +256,8 @@ export const swarmCommand = new Command("swarm")
       const permissionMode = parsePermissionMode(opts.permissionMode);
       const allowedTools = parseList(opts.allowedTools);
       const disallowedTools = parseList(opts.disallowedTools);
-      const maxTurns = opts.maxTurns ? Number(opts.maxTurns) : undefined;
-      const maxBudgetUsd = opts.maxBudgetUsd
-        ? Number(opts.maxBudgetUsd)
-        : undefined;
+      const maxTurns = parseMaxTurns(opts.maxTurns);
+      const maxBudgetUsd = parseMaxBudgetUsd(opts.maxBudgetUsd);
 
       const promptsDir = opts.prompts
         ? path.resolve(opts.prompts)
@@ -329,7 +361,9 @@ export const swarmCommand = new Command("swarm")
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(theme.warning(`swarm: ${msg}`));
+      // The parsers already prefix their messages with "swarm:".
+      const line = msg.startsWith("swarm:") ? msg : `swarm: ${msg}`;
+      console.error(theme.warning(line));
       process.exit(1);
     }
   });

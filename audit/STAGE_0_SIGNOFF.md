@@ -8,10 +8,15 @@
 
 ## 0.1 — Token Hygiene (user action required)
 
+> **Status:** T1 and T2 are still unchecked: their revocation has not been
+> confirmed with evidence in this repo. Only the maintainer can confirm it
+> (`npm token list`) and tick the boxes with evidence; see "Pending owner
+> actions" in [`docs/RELEASING.md`](../docs/RELEASING.md#pending-owner-actions).
+
 | # | Action | Evidence | Initials |
 |---|---|---|---|
-| T1 | Revoke leaked npm token `npm_EMWw…` (leaked in chat 2026-04-15) | Screenshot or `npm token list` showing token absent | `[ ]` |
-| T2 | Revoke leaked npm token `npm_JmSg…` (leaked in chat 2026-04-15) | Same | `[ ]` |
+| T1 | Revoke the first npm token leaked in chat on 2026-04-15 (prefix removed from this file) | Screenshot or `npm token list` showing token absent | `[ ]` |
+| T2 | Revoke the second npm token leaked in chat on 2026-04-15 (prefix removed from this file) | Same | `[ ]` |
 | T3 | Generate new Granular Access Token: scope `@projeto-zero/*`, packages-and-scopes, **Bypass 2FA = ON**, 90-day expiry | Token stored in OS keychain or `~/.npmrc` with 0600 perms; NEVER pasted in chat | `[ ]` |
 | T4 | Enable 2FA `auth-and-writes` on npm account (npm web → Account → 2FA) | `npm profile get` returns `two-factor auth: auth-and-writes` | `[ ]` |
 | T5 | Confirm new token works for publish via `npm whoami --registry=https://registry.npmjs.org/` | Prints `devkauania` | `[ ]` |

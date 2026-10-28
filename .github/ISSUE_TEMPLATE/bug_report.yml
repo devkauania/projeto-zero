@@ -5,9 +5,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the report. For a security problem, please use
-        [private reporting](https://github.com/devkauania/projeto-zero/security/advisories/new)
-        instead of a public issue (see SECURITY.md).
+        Thanks for the report. For a security problem, do not use this form:
+        follow [SECURITY.md](https://github.com/devkauania/projeto-zero/blob/main/SECURITY.md#reporting-a-vulnerability)
+        or open a [private contact request](https://github.com/devkauania/projeto-zero/issues/new?template=private_contact.yml),
+        which asks for no details.
   - type: input
     id: version
     attributes:

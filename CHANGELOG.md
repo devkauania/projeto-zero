@@ -95,6 +95,10 @@ All notable changes to this project will be documented in this file.
 - New `docs/RELEASING.md`: what the release workflow does, how npm
   authenticates today, and the pending owner steps to finish Trusted
   Publishing and retire `NPM_TOKEN`.
+- Private reporting: a "Private contact request" issue form that takes no
+  details, so security and Code of Conduct reports have a private path even
+  when GitHub private vulnerability reporting is not enabled. `SECURITY.md`,
+  the Code of Conduct and the issue chooser now point to it.
 
 ## [1.1.3] - 2026-04-17
 

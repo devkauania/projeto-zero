@@ -16,17 +16,22 @@ on `main` but not yet published.
 
 Please **do not open a public issue** for a security problem.
 
-Report it privately through GitHub:
-[Security → Report a vulnerability](https://github.com/devkauania/projeto-zero/security/advisories/new).
-Only the maintainer can see the report.
+Report it privately, in one of two ways:
 
-If that form is not available, open an issue that only asks for a private
-contact (no details of the problem). The maintainer will open a draft
-security advisory and invite you to it, which is just as private.
+1. **GitHub private vulnerability reporting.** If the repository's
+   [Security tab](https://github.com/devkauania/projeto-zero/security) shows a
+   **Report a vulnerability** button, use it. Only the maintainer can see the
+   report.
+2. **Private contact request.** If that button is not shown, open a
+   [Private contact request](https://github.com/devkauania/projeto-zero/issues/new?template=private_contact.yml)
+   issue. Its form has no field for details: it only says that you have
+   something to report. The maintainer then opens a draft security advisory
+   and invites you to it. A draft advisory is visible only to the
+   maintainer and the people invited, so you send the details there.
 
 A useful report says:
 
-- the version (`projeto-zero --version`) and your OS / Node.js version,
+- the version (`npx @projeto-zero/cli --version`) and your OS / Node.js version,
 - the command you ran and what happened,
 - what you expected instead, or why the behaviour is a security problem,
 - a minimal reproduction if you have one.

@@ -61,11 +61,15 @@ representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement, the project
 maintainer ([@devkauania](https://github.com/devkauania)). To report
-privately, use the repository's private reporting form
-([Security → Report a vulnerability](https://github.com/devkauania/projeto-zero/security/advisories/new)),
-which only the maintainer can read, and say in the title that it is a
-Code of Conduct report. If the form is not available, open an issue that
-only asks for a private contact, without details.
+privately, open a
+[Private contact request](https://github.com/devkauania/projeto-zero/issues/new?template=private_contact.yml)
+issue and pick "Code of Conduct report". The form has no field for details;
+the maintainer replies with a private channel (a draft security advisory,
+visible only to the maintainer and the people invited) where you can
+describe what happened. If the repository's
+[Security tab](https://github.com/devkauania/projeto-zero/security) shows a
+**Report a vulnerability** button, you can use that form instead and say in
+the title that it is a Code of Conduct report.
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

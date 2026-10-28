@@ -1,0 +1,28 @@
+name: Private contact request
+description: Ask the maintainer for a private channel to report a security problem or a Code of Conduct issue. Do not include any details here.
+title: "Private contact request"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is **public**. Do not describe the problem here: no steps,
+        no versions, no names, no logs. The maintainer will reply with a
+        private channel (a draft security advisory that only the maintainer
+        and the people invited can see) where you can send the details.
+        See [SECURITY.md](https://github.com/devkauania/projeto-zero/blob/main/SECURITY.md#reporting-a-vulnerability).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What do you want to report?
+      options:
+        - Security vulnerability
+        - Code of Conduct report
+    validations:
+      required: true
+  - type: checkboxes
+    id: no-details
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have not included any details of the problem in this issue.
+          required: true

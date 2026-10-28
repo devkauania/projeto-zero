@@ -36,20 +36,20 @@ $ git status --short --untracked-files=all
 # add one prompt for the swarm: .agents/prompts/add-tests.md
 
 $ projeto-zero swarm --count 2 --dry-run
-swarm-id: swarm-20261028171221
+swarm-id: swarm-20261028210007
 mode:     work
 count:    2
 
 agent[0]
-  session-id:   47f0e6ec-f34c-4455-b86c-099f45d6df57
-  worktree:     <tmp>\demo-app\.claude\worktrees\swarm-20261028171221\agent-0
+  session-id:   cb17da6e-e000-42c0-aae4-edac7fcce585
+  worktree:     <tmp>\demo-app\.claude\worktrees\swarm-20261028210007\agent-0
   prompt-id:    add-tests
   prompt-path:  <tmp>\demo-app\.agents\prompts\add-tests.md
-  argv:         ["-p","--verbose","--output-format","stream-json","--permission-mode","acceptEdits","--allowed-tools","Read","Write","Edit","Bash(git:*)","Bash(npm:*)","--disallowed-tools","Bash(rm:*)","Bash(curl:*)","Bash(wget:*)","Bash(ssh:*)","WebFetch","WebSearch","--max-turns","20","--max-budget-usd","5.00","--session-id","47f0e6ec-f34c-4455-b86c-099f45d6df57"]
+  argv:         ["-p","--verbose","--output-format","stream-json","--permission-mode","acceptEdits","--allowed-tools","Read","Write","Edit","Bash(git:*)","Bash(npm:*)","--disallowed-tools","Bash(rm:*)","Bash(curl:*)","Bash(wget:*)","Bash(ssh:*)","WebFetch","WebSearch","--max-turns","20","--max-budget-usd","5.00","--session-id","cb17da6e-e000-42c0-aae4-edac7fcce585"]
 
 agent[1]
-  session-id:   666849d0-5496-4aa7-87ce-7341e5a5bb8b
-  worktree:     <tmp>\demo-app\.claude\worktrees\swarm-20261028171221\agent-1
+  session-id:   7b8d2005-1d11-41cb-82cc-005ccd7a6a06
+  worktree:     <tmp>\demo-app\.claude\worktrees\swarm-20261028210007\agent-1
   prompt-id:    add-tests
   prompt-path:  <tmp>\demo-app\.agents\prompts\add-tests.md
-  argv:         ["-p","--verbose","--output-format","stream-json","--permission-mode","acceptEdits","--allowed-tools","Read","Write","Edit","Bash(git:*)","Bash(npm:*)","--disallowed-tools","Bash(rm:*)","Bash(curl:*)","Bash(wget:*)","Bash(ssh:*)","WebFetch","WebSearch","--max-turns","20","--max-budget-usd","5.00","--session-id","666849d0-5496-4aa7-87ce-7341e5a5bb8b"]
+  argv:         ["-p","--verbose","--output-format","stream-json","--permission-mode","acceptEdits","--allowed-tools","Read","Write","Edit","Bash(git:*)","Bash(npm:*)","--disallowed-tools","Bash(rm:*)","Bash(curl:*)","Bash(wget:*)","Bash(ssh:*)","WebFetch","WebSearch","--max-turns","20","--max-budget-usd","5.00","--session-id","7b8d2005-1d11-41cb-82cc-005ccd7a6a06"]

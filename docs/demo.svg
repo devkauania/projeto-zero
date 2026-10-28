@@ -39,26 +39,26 @@
 <text y="718"><tspan x="20.0" textLength="201.6" lengthAdjust="spacing" fill="#e6edf3">?? skills/coder/SKILL.md</tspan></text>
 <text y="758"><tspan x="20.0" textLength="504.0" lengthAdjust="spacing" fill="#8b949e" opacity="0.9"># add one prompt for the swarm: .agents/prompts/add-tests.md</tspan></text>
 <text y="798"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">$</tspan><tspan x="28.4" textLength="327.6" lengthAdjust="spacing" fill="#e6edf3"> projeto-zero swarm --count 2 --dry-run</tspan></text>
-<text y="818"><tspan x="20.0" textLength="252.0" lengthAdjust="spacing" fill="#e6edf3">swarm-id: swarm-20261028171221</tspan></text>
+<text y="818"><tspan x="20.0" textLength="252.0" lengthAdjust="spacing" fill="#e6edf3">swarm-id: swarm-20261028210007</tspan></text>
 <text y="838"><tspan x="20.0" textLength="117.6" lengthAdjust="spacing" fill="#e6edf3">mode:     work</tspan></text>
 <text y="858"><tspan x="20.0" textLength="92.4" lengthAdjust="spacing" fill="#e6edf3">count:    2</tspan></text>
 <text y="898"><tspan x="20.0" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">agent[0]</tspan></text>
-<text y="918"><tspan x="20.0" textLength="436.8" lengthAdjust="spacing" fill="#e6edf3">  session-id:   47f0e6ec-f34c-4455-b86c-099f45d6df57</tspan></text>
-<text y="938"><tspan x="20.0" textLength="646.8" lengthAdjust="spacing" fill="#e6edf3">  worktree:     &lt;tmp&gt;\demo-app\.claude\worktrees\swarm-20261028171221\agent-0</tspan></text>
+<text y="918"><tspan x="20.0" textLength="436.8" lengthAdjust="spacing" fill="#e6edf3">  session-id:   cb17da6e-e000-42c0-aae4-edac7fcce585</tspan></text>
+<text y="938"><tspan x="20.0" textLength="646.8" lengthAdjust="spacing" fill="#e6edf3">  worktree:     &lt;tmp&gt;\demo-app\.claude\worktrees\swarm-20261028210007\agent-0</tspan></text>
 <text y="958"><tspan x="20.0" textLength="210.0" lengthAdjust="spacing" fill="#e6edf3">  prompt-id:    add-tests</tspan></text>
 <text y="978"><tspan x="20.0" textLength="495.6" lengthAdjust="spacing" fill="#e6edf3">  prompt-path:  &lt;tmp&gt;\demo-app\.agents\prompts\add-tests.md</tspan></text>
 <text y="998"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">  argv:         [&quot;-p&quot;,&quot;--verbose&quot;,&quot;--output-format&quot;,&quot;stream-json&quot;,&quot;--permission-mode&quot;,&quot;acceptEdits&quot;,&quot;--a</tspan></text>
 <text y="1018"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">llowed-tools&quot;,&quot;Read&quot;,&quot;Write&quot;,&quot;Edit&quot;,&quot;Bash(git:*)&quot;,&quot;Bash(npm:*)&quot;,&quot;--disallowed-tools&quot;,&quot;Bash(rm:*)&quot;,&quot;Bash(</tspan></text>
 <text y="1038"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">curl:*)&quot;,&quot;Bash(wget:*)&quot;,&quot;Bash(ssh:*)&quot;,&quot;WebFetch&quot;,&quot;WebSearch&quot;,&quot;--max-turns&quot;,&quot;20&quot;,&quot;--max-budget-usd&quot;,&quot;5.00</tspan></text>
-<text y="1058"><tspan x="20.0" textLength="470.4" lengthAdjust="spacing" fill="#e6edf3">&quot;,&quot;--session-id&quot;,&quot;47f0e6ec-f34c-4455-b86c-099f45d6df57&quot;]</tspan></text>
+<text y="1058"><tspan x="20.0" textLength="470.4" lengthAdjust="spacing" fill="#e6edf3">&quot;,&quot;--session-id&quot;,&quot;cb17da6e-e000-42c0-aae4-edac7fcce585&quot;]</tspan></text>
 <text y="1098"><tspan x="20.0" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">agent[1]</tspan></text>
-<text y="1118"><tspan x="20.0" textLength="436.8" lengthAdjust="spacing" fill="#e6edf3">  session-id:   666849d0-5496-4aa7-87ce-7341e5a5bb8b</tspan></text>
-<text y="1138"><tspan x="20.0" textLength="646.8" lengthAdjust="spacing" fill="#e6edf3">  worktree:     &lt;tmp&gt;\demo-app\.claude\worktrees\swarm-20261028171221\agent-1</tspan></text>
+<text y="1118"><tspan x="20.0" textLength="436.8" lengthAdjust="spacing" fill="#e6edf3">  session-id:   7b8d2005-1d11-41cb-82cc-005ccd7a6a06</tspan></text>
+<text y="1138"><tspan x="20.0" textLength="646.8" lengthAdjust="spacing" fill="#e6edf3">  worktree:     &lt;tmp&gt;\demo-app\.claude\worktrees\swarm-20261028210007\agent-1</tspan></text>
 <text y="1158"><tspan x="20.0" textLength="210.0" lengthAdjust="spacing" fill="#e6edf3">  prompt-id:    add-tests</tspan></text>
 <text y="1178"><tspan x="20.0" textLength="495.6" lengthAdjust="spacing" fill="#e6edf3">  prompt-path:  &lt;tmp&gt;\demo-app\.agents\prompts\add-tests.md</tspan></text>
 <text y="1198"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">  argv:         [&quot;-p&quot;,&quot;--verbose&quot;,&quot;--output-format&quot;,&quot;stream-json&quot;,&quot;--permission-mode&quot;,&quot;acceptEdits&quot;,&quot;--a</tspan></text>
 <text y="1218"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">llowed-tools&quot;,&quot;Read&quot;,&quot;Write&quot;,&quot;Edit&quot;,&quot;Bash(git:*)&quot;,&quot;Bash(npm:*)&quot;,&quot;--disallowed-tools&quot;,&quot;Bash(rm:*)&quot;,&quot;Bash(</tspan></text>
 <text y="1238"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">curl:*)&quot;,&quot;Bash(wget:*)&quot;,&quot;Bash(ssh:*)&quot;,&quot;WebFetch&quot;,&quot;WebSearch&quot;,&quot;--max-turns&quot;,&quot;20&quot;,&quot;--max-budget-usd&quot;,&quot;5.00</tspan></text>
-<text y="1258"><tspan x="20.0" textLength="470.4" lengthAdjust="spacing" fill="#e6edf3">&quot;,&quot;--session-id&quot;,&quot;666849d0-5496-4aa7-87ce-7341e5a5bb8b&quot;]</tspan></text>
+<text y="1258"><tspan x="20.0" textLength="470.4" lengthAdjust="spacing" fill="#e6edf3">&quot;,&quot;--session-id&quot;,&quot;7b8d2005-1d11-41cb-82cc-005ccd7a6a06&quot;]</tspan></text>
 </g>
 </svg>

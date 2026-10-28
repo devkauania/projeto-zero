@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  Source of docs/social-preview.png (GitHub social preview, 1280x640).
+  Rendered with a headless Chrome screenshot at a 1280x640 viewport, e.g.
+  playwright-core: page.setViewportSize({width:1280,height:640});
+  page.goto(<this file>); page.screenshot({path:"docs/social-preview.png"}).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>projeto-zero social preview</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --line: #30363d;
+    --fg: #e6edf3;
+    --muted: #8b949e;
+    --accent: #39c5cf;
+    --green: #3fb950;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    background:
+      radial-gradient(900px 500px at 85% 10%, rgba(57, 197, 207, 0.12), transparent 60%),
+      radial-gradient(700px 420px at 0% 100%, rgba(63, 185, 80, 0.08), transparent 60%),
+      var(--bg);
+    color: var(--fg);
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 96px;
+  }
+  .kicker {
+    font-family: ui-monospace, Consolas, Menlo, monospace;
+    color: var(--accent);
+    font-size: 24px;
+    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 104px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  p {
+    margin-top: 28px;
+    font-size: 34px;
+    line-height: 1.35;
+    color: #c9d1d9;
+    max-width: 1000px;
+  }
+  .cmd {
+    margin-top: 48px;
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 26px;
+    font-family: ui-monospace, Consolas, Menlo, monospace;
+    font-size: 28px;
+  }
+  .cmd .dollar { color: var(--green); }
+  .meta {
+    position: absolute;
+    left: 96px;
+    bottom: 44px;
+    font-family: ui-monospace, Consolas, Menlo, monospace;
+    font-size: 20px;
+    color: var(--muted);
+  }
+  .bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 10px;
+    background: linear-gradient(180deg, var(--accent), var(--green));
+  }
+</style>
+</head>
+<body>
+  <div class="bar"></div>
+  <div class="kicker">@projeto-zero/cli</div>
+  <h1>projeto-zero</h1>
+  <p>Scaffold Claude Code agent workspaces and launch parallel agent swarms behind a safety envelope.</p>
+  <div class="cmd"><span class="dollar">$</span><span>npx @projeto-zero/cli init</span></div>
+  <div class="meta">TypeScript · Node.js 20+ · MIT · github.com/devkauania/projeto-zero</div>
+</body>
+</html>

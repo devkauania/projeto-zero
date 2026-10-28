@@ -44,6 +44,17 @@ All notable changes to this project will be documented in this file.
 - `release.yml` now runs `npm audit --omit=dev --audit-level=high` before
   publishing, so a release is blocked by a high/critical advisory in the
   shipped dependency tree. Dev-only advisories do not block.
+- `release.yml` hardened: actions pinned to full commit SHAs (also in
+  `ci.yml`), workflow-level `permissions: {}` with only `contents: read` +
+  `id-token: write` on the publish job, `persist-credentials: false`, no
+  dependency cache in the release job, build and test in a step without the
+  publish credential, and `npm publish --ignore-scripts`. A new preflight
+  check, `scripts/check-workflows.mjs`, fails if any of this regresses.
+- Release workflow prepared for npm Trusted Publishing (OIDC): Node 24 and
+  npm 11.12.1 (needs >= 11.5.1). **Pending owner action:** the trusted
+  publisher still has to be configured on npmjs.com, so publishing keeps
+  using the `NPM_TOKEN` secret as a fallback until then. Steps in
+  `docs/RELEASING.md`.
 
 ### Removed
 - `swarm --temperature`: Claude Code has no temperature flag, so the option
@@ -62,6 +73,9 @@ All notable changes to this project will be documented in this file.
   Code's discovery paths, adds a Security model section, and states that npm
   publish authenticates via the `NPM_TOKEN` secret (OIDC is used only for
   provenance).
+- New `docs/RELEASING.md`: what the release workflow does, how npm
+  authenticates today, and the pending owner steps to finish Trusted
+  Publishing and retire `NPM_TOKEN`.
 
 ## [1.1.3] - 2026-04-17
 

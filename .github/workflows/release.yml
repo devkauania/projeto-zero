@@ -5,22 +5,35 @@ on:
     tags:
       - "v*.*.*"
 
-permissions:
-  contents: read
-  id-token: write
+# Nothing by default; the publish job grants only what it needs.
+permissions: {}
 
 jobs:
   publish:
     name: npm publish (provenance)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # OIDC token: signs the provenance attestation and, once the trusted
+      # publisher is configured on npmjs.com, authenticates the publish.
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      # Actions are pinned to full commit SHAs (tags can be moved).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: 20
-          cache: npm
+          persist-credentials: false
+
+      # Node 24 + npm >= 11.5.1: required for npm Trusted Publishing (OIDC).
+      # No dependency cache in the release job (avoids cache poisoning).
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
+
+      - name: Use npm 11.12.1 (Trusted Publishing needs npm >= 11.5.1)
+        run: |
+          npm install -g npm@11.12.1
+          npm --version
 
       - run: npm ci
 
@@ -42,8 +55,24 @@ jobs:
             exit 1
           fi
 
+      # Build and test here, in a step that holds no publish credential, so
+      # dev-dependency code (tsc, vitest, ...) never runs next to the token.
+      - name: Build and test the package (no credentials)
+        working-directory: apps/cli
+        run: |
+          npm run build
+          npm test
+
+      # --ignore-scripts: prepublishOnly (build + test) already ran above and
+      # must not run again inside the step that can publish.
+      #
+      # Auth: npm >= 11.5.1 tries OIDC Trusted Publishing first and falls
+      # back to NODE_AUTH_TOKEN. The trusted publisher is NOT configured on
+      # npmjs.com yet (pending owner action, see docs/RELEASING.md), so today
+      # the NPM_TOKEN secret is what actually authenticates. Remove the env
+      # below and revoke the token once an OIDC release has succeeded.
       - name: Publish with provenance
         working-directory: apps/cli
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

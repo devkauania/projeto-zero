@@ -19,6 +19,7 @@ const CHECKS = [
   { name: "check-no-self-dep",     cmd: "node", args: [join(REPO_ROOT, "scripts", "check-no-self-dep.mjs")] },
   { name: "check-non-tty-connectors", cmd: "node", args: [join(REPO_ROOT, "scripts", "check-non-tty-connectors.mjs")] },
   { name: "check-no-multi-llm",    cmd: "node", args: [join(REPO_ROOT, "scripts", "check-no-multi-llm.mjs")] },
+  { name: "check-workflows",       cmd: "node", args: [join(REPO_ROOT, "scripts", "check-workflows.mjs")] },
 ];
 
 function run(check) {

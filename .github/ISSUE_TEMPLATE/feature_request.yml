@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would you like the CLI to do? Command names, flags and example output help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you use now, or other designs you thought about.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Swarm safety
+      description: Only relevant if the request touches `swarm`.
+      options:
+        - label: This keeps the swarm safety defaults (argv-array spawn, env allowlist, `--i-understand` gate for `bypassPermissions`), or the proposal explains why a change is safe.

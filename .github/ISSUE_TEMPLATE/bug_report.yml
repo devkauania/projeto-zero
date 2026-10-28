@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in the CLI does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For a security problem, please use
+        [private reporting](https://github.com/devkauania/projeto-zero/security/advisories/new)
+        instead of a public issue (see SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: CLI version
+      description: Output of `npx @projeto-zero/cli --version`, or the commit hash if you run from source.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node.js version (`node --version`) and, for `swarm --live`, Claude Code version (`claude --version`).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands you ran, starting from an empty directory if you can.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Paste the full output. Remove anything private (paths, tokens) first.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true

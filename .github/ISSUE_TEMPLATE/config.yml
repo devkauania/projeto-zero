@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/devkauania/projeto-zero/security/advisories/new
+    about: Please report security problems privately, not as a public issue.
+  - name: Swarm safety defaults and troubleshooting
+    url: https://github.com/devkauania/projeto-zero/blob/main/docs/SWARM.md
+    about: Read this first if your question is about `swarm`.

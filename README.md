@@ -11,7 +11,7 @@ Published on npm as [`@projeto-zero/cli`](https://www.npmjs.com/package/@projeto
 
 ![A recorded run of projeto-zero: init, generate, git status, then swarm --count 2 --dry-run printing two agent plans with their worktrees and Claude Code argv](docs/demo.svg)
 
-<sub>Recorded from this repo's `main` build with `npm run demo` ([`scripts/record-demo.mjs`](scripts/record-demo.mjs)). `main` carries unreleased fixes on top of 1.1.3, so `--version` prints 1.1.3 while the swarm argv shown is the fixed one (see the note under [Quickstart](#quickstart)). All program output is real and unedited except that trailing blank lines are trimmed and the temp directory is shortened to `<tmp>` (recorded on Windows, hence the backslashes); the script adds only the `$` command lines and the `#` note. Plain-text copy: [`docs/demo.txt`](docs/demo.txt).</sub>
+<sub>Recorded from this repo's `main` build with `npm run demo` ([`scripts/record-demo.mjs`](scripts/record-demo.mjs)). `main` carries unreleased fixes on top of 1.1.3, so `--version` prints 1.1.3 while the swarm argv shown is the fixed one (see the note under [Quickstart](#quickstart)). All program output is real and unedited except that trailing blank lines are trimmed and the temp directory is shortened to `<tmp>` (recorded on Windows, hence the backslashes); the script adds only the `$` command lines and the `#` note. The `$ projeto-zero` lines use the command name from `main`; with 1.1.3 from npm, type `antigravity` or `npx @projeto-zero/cli` instead. Plain-text copy: [`docs/demo.txt`](docs/demo.txt).</sub>
 
 ## Why
 
@@ -38,8 +38,13 @@ Requires Node.js 20 or newer. [Claude Code](https://docs.claude.com/claude-code)
 
 ```bash
 npx @projeto-zero/cli init          # run without installing
-npm install -g @projeto-zero/cli    # or install the `projeto-zero` command
+npm install -g @projeto-zero/cli    # or install it globally
 ```
+
+A global install of 1.1.3, the version on npm today, provides one command,
+`antigravity` (the project's original name). The `projeto-zero` command is
+an alias added on `main` and ships with the next release; until then, use
+`antigravity` or `npx @projeto-zero/cli`.
 
 ## Quickstart
 
@@ -232,9 +237,11 @@ passes. `node scripts/verdict.mjs` turns that result into a single
   `.claude/skills/` (see [the table above](#where-the-generated-files-go)).
 - `swarm --live` streams each agent's output with an `[agent-N]` prefix;
   there is no grid UI yet.
-- The command's help text and second binary still use the project's
-  original name, `antigravity`, as does the `ANTIGRAVITY_CONFIG_DIR`
-  variable. Renaming them is a breaking change saved for a major release.
+- The command's help text still uses the project's original name,
+  `antigravity`, as do the `ANTIGRAVITY_CONFIG_DIR` variable and the only
+  command a 1.1.3 global install provides (`projeto-zero` arrives as a second
+  command in the next release). Renaming them is a breaking change saved for
+  a major release.
 
 ## Contributing
 

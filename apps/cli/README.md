@@ -26,7 +26,7 @@ Or install globally once and re-use the same binary across projects:
 npm install -g @projeto-zero/cli
 ```
 
-> After a global install, the CLI is available as `projeto-zero <command>` (and as `antigravity <command>`, the original binary name, kept for back-compat). All examples below use `npx` so they work without a global install.
+> After a global install, the CLI is available as `antigravity <command>` (the original binary name). Releases after 1.1.3 also install it as `projeto-zero <command>`; 1.1.3 installs only `antigravity`. All examples below use `npx` so they work without a global install.
 
 ## Usage
 

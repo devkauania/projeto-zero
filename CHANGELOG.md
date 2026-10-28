@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- A `projeto-zero` command. The package's `bin` now lists `projeto-zero`
+  next to `antigravity`; both run the same CLI. 1.1.3 on npm only installs
+  `antigravity`.
+
 ### Fixed
 - `swarm --max-budget-usd` and `--max-turns` silently replaced values they
   could not use with the defaults. `--max-budget-usd 0,5` (comma decimal),

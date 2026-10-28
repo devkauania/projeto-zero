@@ -2,49 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { BudgetMeter } from "../lib/swarm/budget-meter.js";
 import {
   worktreePathFor,
   listWorktreesForSwarm,
 } from "../lib/swarm/worktree-manager.js";
 import { discoverPrompts } from "../lib/swarm/prompt-browser.js";
-
-describe("BudgetMeter", () => {
-  it("tracks turns and USD spend per agent", () => {
-    const m = new BudgetMeter();
-    m.register("a", 5, 1.0);
-    m.register("b", 5, 1.0);
-    m.recordTurn("a", 0.25);
-    m.recordTurn("a", 0.25);
-    m.recordTurn("b", 0.1);
-    const snap = m.snapshot();
-    expect(snap.totalTurns).toBe(3);
-    expect(snap.totalUsd).toBeCloseTo(0.6, 6);
-  });
-
-  it("flags over-budget when turns exhausted", () => {
-    const m = new BudgetMeter();
-    m.register("a", 2, 100);
-    m.recordTurn("a", 0);
-    m.recordTurn("a", 0);
-    expect(m.isOverBudget("a")).toBe(true);
-  });
-
-  it("flags over-budget when USD exceeded", () => {
-    const m = new BudgetMeter();
-    m.register("a", 100, 1.0);
-    m.recordTurn("a", 1.5);
-    expect(m.isOverBudget("a")).toBe(true);
-  });
-
-  it("rejects duplicate registrations and negative USD deltas", () => {
-    const m = new BudgetMeter();
-    m.register("a", 5, 1);
-    expect(() => m.register("a", 5, 1)).toThrow(/duplicate/);
-    expect(() => m.recordTurn("a", -0.1)).toThrow(/non-negative/);
-    expect(() => m.recordTurn("unknown", 0.1)).toThrow(/unknown agent/);
-  });
-});
 
 describe("worktreePathFor", () => {
   it("returns the canonical relative layout under the repo root", () => {

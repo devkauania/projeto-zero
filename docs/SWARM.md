@@ -46,7 +46,7 @@ that file and updating the drift-guard tests.
 | `--max-turns` | `20` | Per-agent turn cap. |
 | `--max-budget-usd` | `5.00` | Per-agent USD cap. |
 | `--temperature` | `0.2` | Deterministic-leaning sampling for reproducible verification. |
-| `--output-format` | `stream-json` | Parseable by the budget meter and the TUI. |
+| `--output-format` | `stream-json` | Machine-parseable. The v1.1.0 live renderer streams it as-is with an `[agent-N]` prefix. The `--max-budget-usd` value is passed through to each child `claude` process; the launcher itself does not track spend. |
 | `--working-dir` | `.claude/worktrees/<swarm-id>/agent-<n>` | Each agent is confined to its own git worktree. |
 | child env | Allowlist of 11 variables (`PATH`, `HOME`, `CLAUDE_CODE_OAUTH_TOKEN`, …) | `NPM_TOKEN`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, and every other parent env var are stripped before spawn. |
 

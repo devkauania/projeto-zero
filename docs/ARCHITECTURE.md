@@ -256,7 +256,7 @@ Current gate set (from [`scripts/preflight.mjs`](scripts/preflight.mjs)):
 
 - **build** — `turbo build` across all workspaces
 - **lint** — `turbo lint`
-- **test** — `turbo test` (98 tests across 13 files at time of writing)
+- **test** — `turbo test` (91 tests across 13 files at time of writing)
 - **files-exist** — every path listed in `apps/cli/package.json#files` resolves on disk
 - **pack-sanity** — `npm pack --dry-run` has the expected file count, size, and no forbidden patterns
 - **repo-metadata** — package.json has valid `name`, `version`, `description`, `repository`, `license`, etc.
@@ -316,9 +316,8 @@ apps/cli/src/
 │       ├── safety-envelope.ts    # argv builder + --i-understand gate
 │       ├── agent-spawner.ts      # the only place spawn() is called
 │       ├── worktree-manager.ts   # NAME_RE + path-relative containment
-│       ├── prompt-browser.ts     # .agents/prompts/*.md discovery
-│       └── budget-meter.ts       # per-agent USD spend ceiling
-└── __tests__/            # vitest suite — 98 tests, 13 files
+│       └── prompt-browser.ts     # .agents/prompts/*.md discovery
+└── __tests__/            # vitest suite — 91 tests, 13 files
 
 scripts/
 ├── preflight.mjs         # orchestrates every gate below

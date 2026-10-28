@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Removed
+- `apps/cli/src/lib/swarm/budget-meter.ts`: dead code. Only its own unit test
+  imported it, and the swarm launcher never used it. Per-agent spend is still
+  bounded by the `--max-budget-usd` flag passed to each child `claude` process.
+
+### Docs
+- README: describes exactly what `generate` writes and how it maps to Claude
+  Code's discovery paths, adds a Security model section, and states that npm
+  publish authenticates via the `NPM_TOKEN` secret (OIDC is used only for
+  provenance).
+
 ## [1.1.3] - 2026-04-17
 
 Re-release of v1.1.2 content. The v1.1.2 tag passed `npm ci`, preflight,

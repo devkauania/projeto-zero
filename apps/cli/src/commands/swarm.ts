@@ -195,8 +195,14 @@ export const swarmCommand = new Command("swarm")
     "--permission-mode <mode>",
     "plan | acceptEdits | bypassPermissions (requires --i-understand)"
   )
-  .option("--allowed-tools <list>", "Comma-separated tool allowlist")
-  .option("--disallowed-tools <list>", "Comma-separated tool denylist")
+  .option(
+    "--allowed-tools <list>",
+    'Comma-separated Claude Code permission rules to auto-approve (replaces the default, e.g. "Read,Edit,Bash(git:*)")'
+  )
+  .option(
+    "--disallowed-tools <list>",
+    'Comma-separated Claude Code deny rules (replaces the default, e.g. "Bash(rm:*),WebFetch"). Not a sandbox.'
+  )
   .option("--session-prefix <str>", "Swarm id prefix (default: swarm)")
   .option(
     "--i-understand",

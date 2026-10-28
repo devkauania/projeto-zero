@@ -87,21 +87,72 @@ export interface BuiltEnvelope {
   };
 }
 
-/** Hardcoded safe defaults. Exported for tests to diff against. */
+/**
+ * Hardcoded defaults, written as Claude Code permission rules. Exported for
+ * tests to diff against.
+ *
+ * Syntax (Claude Code permissions docs, https://code.claude.com/docs/en/permissions):
+ * tool names are case-sensitive (`Read`, `Write`, `Edit`, `Bash`, `Grep`,
+ * `Glob`, `WebFetch`, `WebSearch`); `Bash(git:*)` is the legacy spelling of
+ * the prefix rule `Bash(git *)` and matches the same commands. Releases up
+ * to 1.1.3 used made-up lowercase names (`read_file`, `bash(rm:*)`), which
+ * Claude Code ignores ("matches no known tool"), so none of them applied.
+ *
+ * HONESTY NOTE — these lists are NOT a sandbox:
+ *  - `--allowed-tools` only auto-approves matching calls; it does not
+ *    restrict anything by itself.
+ *  - A Bash deny rule matches the command text as written. It does not
+ *    match the same program by path, inside `sh -c`/`bash -c`, or the same
+ *    effect via `node -e`, `python -c`, `git -c core.sshCommand=...`, etc.
+ *  - `Bash(npm:*)` lets the agent run any package script, i.e. arbitrary
+ *    code.
+ * The real controls are the permission mode (`acceptEdits`/`plan`; never
+ * `bypassPermissions` without isolation), the per-agent git worktree and,
+ * if you need hard filesystem/network limits, Claude Code's sandbox or a
+ * container. See docs/SWARM.md.
+ */
 export const DEFAULT_ALLOWED_TOOLS = Object.freeze([
-  "read_file",
-  "write_file",
-  "edit_file",
-  "bash(git:*)",
-  "bash(npm:*)",
+  "Read",
+  "Write",
+  "Edit",
+  "Bash(git:*)",
+  "Bash(npm:*)",
 ]);
 
 export const DEFAULT_DISALLOWED_TOOLS = Object.freeze([
-  "bash(rm:*)",
-  "bash(curl:*)",
-  "bash(wget:*)",
-  "bash(ssh:*)",
+  "Bash(rm:*)",
+  "Bash(curl:*)",
+  "Bash(wget:*)",
+  "Bash(ssh:*)",
+  "WebFetch",
+  "WebSearch",
 ]);
+
+/**
+ * Built-in Claude Code tool names the default rules may reference. Exported
+ * for the drift test, which fails if a default rule names anything else
+ * (the 1.1.3 bug: rules that matched no tool at all).
+ */
+export const KNOWN_CLAUDE_TOOLS = Object.freeze([
+  "Read",
+  "Write",
+  "Edit",
+  "Bash",
+  "Grep",
+  "Glob",
+  "WebFetch",
+  "WebSearch",
+]);
+
+/**
+ * Shape of a permission rule accepted from the caller (`--allowed-tools`,
+ * `--disallowed-tools`): `*`, a capitalized tool name with an optional
+ * `(specifier)`, or an MCP tool name (`mcp__server`, `mcp__server__tool`,
+ * `mcp__*`). Lowercase names such as `read_file` or `bash(rm:*)` are refused
+ * because Claude Code would silently ignore them.
+ */
+export const PERMISSION_RULE_RE =
+  /^(?:\*|[A-Z][A-Za-z0-9]*(?:\([^()\r\n]+\))?|mcp__[A-Za-z0-9_*-]+)$/;
 
 export const DEFAULT_MAX_TURNS = 20;
 export const DEFAULT_MAX_BUDGET_USD = 5.0;
@@ -126,7 +177,12 @@ export const CLAUDE_CLI_FLAGS = Object.freeze([
 ]);
 
 /** Verify mode is strictly read-only regardless of what the caller asked for. */
-const VERIFY_ALLOWED_TOOLS = Object.freeze(["read_file", "bash(git:diff*)"]);
+export const VERIFY_ALLOWED_TOOLS = Object.freeze([
+  "Read",
+  "Grep",
+  "Glob",
+  "Bash(git diff:*)",
+]);
 
 const SESSION_ID_RE = /^[a-f0-9-]{8,64}$/i;
 
@@ -148,6 +204,20 @@ export function buildClaudeArgv(input: SafetyEnvelopeInput): BuiltEnvelope {
   }
   if (input.mode !== "work" && input.mode !== "verify") {
     throw new Error(`safety-envelope: invalid mode "${input.mode}"`);
+  }
+
+  for (const [label, list] of [
+    ["allowedTools", input.allowedTools],
+    ["disallowedTools", input.disallowedTools],
+  ] as const) {
+    for (const rule of list ?? []) {
+      if (typeof rule !== "string" || !PERMISSION_RULE_RE.test(rule)) {
+        throw new Error(
+          `safety-envelope: invalid ${label} rule ${JSON.stringify(rule)} — ` +
+            `use Claude Code rule syntax, e.g. "Read", "Bash(git:*)", "WebFetch", "mcp__server__tool"`
+        );
+      }
+    }
   }
 
   // Resolve permission mode. Verify mode is always `plan`. Work mode defaults

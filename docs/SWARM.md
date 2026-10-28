@@ -50,8 +50,8 @@ against a recorded list of real Claude Code CLI flags
 |---|---|---|
 | `-p` / `--verbose` | always | Print (non-interactive) mode. `--output-format`, `--max-turns` and `--max-budget-usd` only work with `-p`, and `stream-json` under `-p` requires `--verbose`. |
 | `--permission-mode` | `acceptEdits` (work) / `plan` (verify) | `bypassPermissions` requires both `--permission-mode bypassPermissions` AND `--i-understand` at the top-level CLI. Verify mode is always read-only. |
-| `--allowed-tools` | `read_file,write_file,edit_file,bash(git:*),bash(npm:*)` | Tight allowlist. Verify mode collapses to `read_file,bash(git:diff*)`. |
-| `--disallowed-tools` | `bash(rm:*),bash(curl:*),bash(wget:*),bash(ssh:*)` | Destructive and network-exfiltration shell commands. |
+| `--allowed-tools` | `Read Write Edit Bash(git:*) Bash(npm:*)` | Calls Claude Code auto-approves without asking. This does not restrict other tools by itself. Verify mode always uses `Read Grep Glob Bash(git diff:*)`. Note that `Bash(npm:*)` runs any package script, i.e. arbitrary code. |
+| `--disallowed-tools` | `Bash(rm:*) Bash(curl:*) Bash(wget:*) Bash(ssh:*) WebFetch WebSearch` | Deny rules. `WebFetch`/`WebSearch` remove those tools entirely; the `Bash(...)` rules refuse commands that start with that text. A speed bump, **not a sandbox** (see below). |
 | `--max-turns` | `20` | Per-agent turn cap. |
 | `--max-budget-usd` | `5.00` | Per-agent USD cap. |
 | `--output-format` | `stream-json` | Machine-parseable. The live renderer streams each line with an `[agent-N]` prefix and also parses it to decide success (see below). The `--max-budget-usd` value is passed through to each child `claude` process; the launcher itself does not track spend. |
@@ -68,6 +68,42 @@ file and streamed to the child's stdin. A static test
 (`apps/cli/src/__tests__/swarm-spawner.test.ts`) greps the spawner source
 for `argv.join`, `exec(`, `execSync(`, and `shell: true`, failing the
 build if any appear.
+
+---
+
+## Tool rules are not a sandbox
+
+The rules use Claude Code's permission rule syntax
+(<https://code.claude.com/docs/en/permissions>): case-sensitive tool names
+(`Read`, `Write`, `Edit`, `Bash`, `Grep`, `Glob`, `WebFetch`, `WebSearch`,
+`mcp__<server>__<tool>`), and `Bash(git:*)`, which is the legacy spelling of
+the prefix rule `Bash(git *)`. Each rule is passed as its own argv element.
+Values you pass with `--allowed-tools` / `--disallowed-tools` must have
+that shape (`*`, `Name`, `Name(specifier)` or `mcp__...`); anything else,
+such as `read_file` or lowercase `bash(rm:*)`, is refused before spawning,
+because Claude Code would silently ignore it. Passing either option
+**replaces** the default list rather than adding to it.
+
+Releases up to 1.1.3 shipped made-up lowercase names (`read_file`,
+`bash(rm:*)`, ...). Claude Code ignored all of them ("matches no known
+tool"), so that deny-list never blocked anything.
+
+Even with correct names, be clear about what the lists do:
+
+- A Bash deny rule matches the command text as written. It does not match
+  the same program called by path, inside `sh -c` / `bash -c`, or the same
+  effect through `node -e`, `python -c`, `npm run <script>`,
+  `git -c core.sshCommand=...`, PowerShell, and so on.
+- `--allowed-tools` only decides what runs without a prompt; in `-p` mode a
+  call that is neither allowed nor auto-approved by the permission mode is
+  refused.
+- The controls that actually hold are the permission mode (`acceptEdits` for
+  work, `plan` for verify), the per-agent git worktree and the child env
+  allowlist. If you need hard filesystem or network limits, run the swarm
+  inside Claude Code's sandbox
+  (<https://code.claude.com/docs/en/sandboxing>) or a container. Do not use
+  `bypassPermissions` outside such isolation: with it, the deny-list is the
+  only thing left, and it is easy to get around.
 
 ---
 
@@ -130,10 +166,11 @@ USD, elapsed.
 
 ## Verify mode (batch-2 review pass)
 
-`--mode verify` spawns a read-only review agent. Permission mode is
-forced to `plan`, the allowed-tools list collapses to
-`read_file,bash(git:diff*)`, and the agent cannot write outside
-`audit/swarm-<id>/`. Typical flow:
+`--mode verify` spawns a review agent. Permission mode is forced to `plan`
+(Claude Code's read-only planning mode) and the allowed-tools list is
+always `Read Grep Glob Bash(git diff:*)`, whatever you pass. The launcher
+does not collect review files anywhere: each agent's stream-json output is
+printed to your terminal with an `[agent-N]` prefix. Typical flow:
 
 ```bash
 # 1. Work batch — three agents edit in their own worktrees.
@@ -142,8 +179,6 @@ antigravity swarm --count 3 --mode work --live
 # 2. Review batch — three verifiers review each worktree's diff.
 antigravity swarm --count 3 --mode verify --live
 ```
-
-Output is collected to `audit/swarm-<id>/agent-<n>-review.md`.
 
 ---
 
@@ -161,7 +196,7 @@ name: security-sweep
 Review the diff at <worktree> against HEAD. Flag any change that:
 - introduces a new dependency
 - changes a file under `.github/workflows/`
-- adds a `bash(` call outside an existing allowlist
+- adds a `Bash(` rule outside the existing allowlist
 Output: markdown to stdout.
 ```
 

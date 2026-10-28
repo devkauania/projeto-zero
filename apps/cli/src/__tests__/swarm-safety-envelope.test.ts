@@ -7,6 +7,9 @@ import {
   DEFAULT_MAX_TURNS,
   DEFAULT_MAX_BUDGET_USD,
   CLAUDE_CLI_FLAGS,
+  KNOWN_CLAUDE_TOOLS,
+  PERMISSION_RULE_RE,
+  VERIFY_ALLOWED_TOOLS,
 } from "../lib/swarm/safety-envelope.js";
 
 const base = {
@@ -48,14 +51,16 @@ describe("safety-envelope — anti-gaming invariant", () => {
       mode: "verify",
       permissionMode: "bypassPermissions", // ignored
       iUnderstand: true, // ignored
-      allowedTools: ["write_file"], // ignored
+      allowedTools: ["Write"], // ignored
     });
     expect(built.effective.permissionMode).toBe("plan");
     expect(built.effective.allowedTools).toEqual([
-      "read_file",
-      "bash(git:diff*)",
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(git diff:*)",
     ]);
-    expect(built.effective.allowedTools).not.toContain("write_file");
+    expect(built.effective.allowedTools).not.toContain("Write");
   });
 });
 
@@ -196,5 +201,97 @@ describe("safety-envelope — Claude Code CLI contract (regression: invalid flag
       expect(i, f).toBeGreaterThanOrEqual(0);
       expect(argv[i + 1]?.startsWith("-"), f).toBe(false);
     }
+  });
+});
+
+describe("safety-envelope — Claude Code tool rules (regression: rules matched no tool)", () => {
+  // Regression: 1.1.3 shipped read_file/write_file/edit_file and lowercase
+  // bash(rm:*) etc. Claude Code printed "Permission deny rule ... matches no
+  // known tool" and ignored them, so the rm/curl/wget/ssh deny-list did
+  // nothing. These tests pin the real, case-sensitive tool names.
+  function toolOf(rule: string): string {
+    const i = rule.indexOf("(");
+    return i === -1 ? rule : rule.slice(0, i);
+  }
+
+  it("every default rule names a real built-in Claude Code tool", () => {
+    for (const rule of [
+      ...DEFAULT_ALLOWED_TOOLS,
+      ...DEFAULT_DISALLOWED_TOOLS,
+      ...VERIFY_ALLOWED_TOOLS,
+    ]) {
+      expect(KNOWN_CLAUDE_TOOLS, rule).toContain(toolOf(rule));
+      expect(rule, rule).toMatch(PERMISSION_RULE_RE);
+    }
+  });
+
+  it("pins the exact default lists", () => {
+    expect([...DEFAULT_ALLOWED_TOOLS]).toEqual([
+      "Read",
+      "Write",
+      "Edit",
+      "Bash(git:*)",
+      "Bash(npm:*)",
+    ]);
+    expect([...DEFAULT_DISALLOWED_TOOLS]).toEqual([
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)",
+      "WebFetch",
+      "WebSearch",
+    ]);
+    expect([...VERIFY_ALLOWED_TOOLS]).toEqual([
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(git diff:*)",
+    ]);
+  });
+
+  it("no rule uses the old made-up lowercase names", () => {
+    const all = [
+      ...DEFAULT_ALLOWED_TOOLS,
+      ...DEFAULT_DISALLOWED_TOOLS,
+      ...VERIFY_ALLOWED_TOOLS,
+    ].join(" ");
+    expect(all).not.toMatch(/read_file|write_file|edit_file|\bbash\(/);
+  });
+
+  it("each rule is emitted as its own argv element (space-containing rules survive)", () => {
+    const { argv } = buildClaudeArgv({ ...base, mode: "verify" });
+    const a = argv.indexOf("--allowed-tools");
+    const d = argv.indexOf("--disallowed-tools");
+    expect(argv.slice(a + 1, d)).toEqual([...VERIFY_ALLOWED_TOOLS]);
+    expect(argv).toContain("Bash(git diff:*)");
+  });
+
+  it("rejects caller rules Claude Code would silently ignore", () => {
+    const badRules = [
+      "read_file",
+      "bash(rm:*)",
+      "--permission-mode=bypassPermissions",
+      "Bash(rm:*)\nRead",
+      "",
+    ];
+    for (const bad of badRules) {
+      expect(() =>
+        buildClaudeArgv({ ...base, mode: "work", disallowedTools: [bad] })
+      ).toThrow(/invalid disallowedTools rule/);
+      expect(() =>
+        buildClaudeArgv({ ...base, mode: "work", allowedTools: [bad] })
+      ).toThrow(/invalid allowedTools rule/);
+    }
+  });
+
+  it("accepts valid caller rules, including MCP and domain-scoped ones", () => {
+    const built = buildClaudeArgv({
+      ...base,
+      mode: "work",
+      allowedTools: ["Read", "Bash(npm run test:*)", "mcp__github__get_issue"],
+      disallowedTools: ["WebFetch(domain:github.com)", "mcp__*", "*"],
+    });
+    expect(built.effective.allowedTools).toContain("mcp__github__get_issue");
+    expect(built.effective.disallowedTools).toContain("mcp__*");
   });
 });

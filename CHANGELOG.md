@@ -18,6 +18,14 @@ All notable changes to this project will be documented in this file.
   as successful if it exits 0, its stdout is valid stream-json and it ends
   with a successful `result` event. Otherwise the run prints the reason per
   agent, says `FAILED` and exits 1 (previously only spawn errors counted).
+- Swarm tool allow/deny lists used names Claude Code does not know
+  (`read_file`, `write_file`, `edit_file`, lowercase `bash(rm:*)`, ...), so
+  Claude Code ignored every rule and the rm/curl/wget/ssh deny-list never
+  applied. Defaults are now real, case-sensitive Claude Code rules: allow
+  `Read Write Edit Bash(git:*) Bash(npm:*)`; deny `Bash(rm:*) Bash(curl:*)
+  Bash(wget:*) Bash(ssh:*) WebFetch WebSearch`; verify mode allows
+  `Read Grep Glob Bash(git diff:*)`. User-supplied `--allowed-tools` /
+  `--disallowed-tools` rules are validated and malformed ones are refused.
 
 ### Removed
 - `swarm --temperature`: Claude Code has no temperature flag, so the option
@@ -27,6 +35,11 @@ All notable changes to this project will be documented in this file.
   bounded by the `--max-budget-usd` flag passed to each child `claude` process.
 
 ### Docs
+- `docs/SWARM.md` now says plainly that the tool lists are a speed bump, not
+  a sandbox (Bash prefix rules are easy to get around; `Bash(npm:*)` runs
+  arbitrary package scripts), and points to Claude Code's sandbox or a
+  container for hard limits. Removed the claim that verify mode writes
+  review files to `audit/swarm-<id>/`; the launcher never did that.
 - README: describes exactly what `generate` writes and how it maps to Claude
   Code's discovery paths, adds a Security model section, and states that npm
   publish authenticates via the `NPM_TOKEN` secret (OIDC is used only for

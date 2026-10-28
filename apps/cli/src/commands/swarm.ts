@@ -158,7 +158,8 @@ export function buildSwarmPlan(args: {
   if (prompts.length === 0) {
     throw new Error(
       "swarm: no prompts discovered (default glob: .agents/prompts/*.md). " +
-      "Scaffold some with `antigravity init` or pass --prompts."
+      "`generate` only creates that folder: write one .md prompt file per " +
+      "task in it, or point --prompts <dir> at a folder of .md files."
     );
   }
 
@@ -219,7 +220,7 @@ export function renderPlan(plan: SwarmPlan): string {
 }
 
 export const swarmCommand = new Command("swarm")
-  .description("Launch a parallel Claude Code agent swarm (dry-run by default in v1.1.0)")
+  .description("Launch a parallel Claude Code agent swarm (dry-run unless --live)")
   .option("--count <n>", "Number of agents (1..15)", "1")
   .option("--prompts <dir>", "Prompts directory (default: .agents/prompts)")
   .option("--mode <work|verify>", "work = edits; verify = read-only review", "work")

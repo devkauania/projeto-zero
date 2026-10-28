@@ -229,7 +229,7 @@ antigravity swarm --count 1 --permission-mode bypassPermissions --i-understand -
 
 | Symptom | Likely cause |
 |---|---|
-| `swarm: no prompts discovered` | `.agents/prompts/` is empty or missing. Run `antigravity init` first, or create `.md` files in that directory. |
+| `swarm: no prompts discovered` | `.agents/prompts/` is empty or missing. `generate` only creates the folder; write one `.md` prompt file per task in it, or pass `--prompts <dir>`. |
 | `swarm: invalid sessionId` | You overrode a session-prefix with non-`[a-zA-Z0-9_-]` characters. |
 | `git worktree add failed` | A previous run's worktree wasn't cleaned up. `git worktree remove --force <path>` or `git worktree prune`. |
 | Agent hangs without output | Confirm `claude --version` is on PATH and `CLAUDE_CODE_OAUTH_TOKEN` is set. Without the token the child exits silently. |

@@ -119,6 +119,27 @@ describe("buildSwarmPlan", () => {
       })
     ).toThrow(/no prompts discovered/);
   });
+
+  it("tells the user to write prompt files, not to re-run init", () => {
+    // Regression: the hint used to say "Scaffold some with `antigravity
+    // init`", but init writes no files and generate only creates an empty
+    // .agents/prompts/ folder, so following the hint never fixed the error.
+    let message = "";
+    try {
+      buildSwarmPlan({
+        count: 1,
+        mode: "work",
+        prompts: [],
+        sessionPrefix: "test",
+        repoRoot: FIXTURE_ROOT,
+      });
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toMatch(/write one \.md prompt file per task/);
+    expect(message).toMatch(/--prompts <dir>/);
+    expect(message).not.toMatch(/\binit\b/);
+  });
 });
 
 describe("renderPlan — deterministic output", () => {

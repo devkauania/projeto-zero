@@ -168,4 +168,4 @@ You are trying to execute `generate` or `info` before establishing the configura
 Since the CLI saves state locally on your machine, running `init` on one project and `generate` without re-running `init` across another repo will inherit the previous config values. Use `npx -y @projeto-zero/cli reset` to safely purge settings before pivoting scopes.
 
 ### Swarm says "no prompts discovered"
-`generate` creates `.agents/prompts/` as an empty folder. Author your own `*.md` prompt files there before running `swarm`, or pass an explicit glob via `--prompts <pattern>`.
+`generate` creates `.agents/prompts/` as an empty folder. Author your own `*.md` prompt files there before running `swarm`, or point `--prompts <dir>` at another folder of `.md` files.

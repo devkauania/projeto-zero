@@ -41,6 +41,12 @@ All notable changes to this project will be documented in this file.
   `loadConfig()` and `scaffoldProject()` both refuse anything else before
   writing, and the write itself is checked to stay inside `.mcp/`. `reset`
   can still clear a config that fails this check.
+- `swarm` with no prompt files told you to "Scaffold some with `antigravity
+  init`", which cannot help: `init` writes no files and `generate` only
+  creates an empty `.agents/prompts/`. The message now says to write one
+  `.md` prompt file per task there, or to pass `--prompts <dir>`. The
+  `swarm --help` summary no longer says "dry-run by default in v1.1.0"; it
+  says "dry-run unless --live".
 
 ### Security
 - `package-lock.json` refreshed with `npm audit fix` (no `--force`). Before:

@@ -34,6 +34,17 @@ All notable changes to this project will be documented in this file.
   writing, and the write itself is checked to stay inside `.mcp/`. `reset`
   can still clear a config that fails this check.
 
+### Security
+- `package-lock.json` refreshed with `npm audit fix` (no `--force`). Before:
+  2 high advisories in the production tree (figlet < 1.11.3, fast-uri
+  < 3.1.9) and 9 in the full tree (vite, vitest, turbo, postcss, nanoid,
+  source-map-js). After: `npm audit` reports 0. Neither production advisory
+  was reachable from the CLI, and npm consumers never receive this lockfile;
+  this protects developer and CI machines that run `npm ci`.
+- `release.yml` now runs `npm audit --omit=dev --audit-level=high` before
+  publishing, so a release is blocked by a high/critical advisory in the
+  shipped dependency tree. Dev-only advisories do not block.
+
 ### Removed
 - `swarm --temperature`: Claude Code has no temperature flag, so the option
   never had any effect other than breaking `--live`.

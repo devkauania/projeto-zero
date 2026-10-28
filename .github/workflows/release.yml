@@ -24,6 +24,11 @@ jobs:
 
       - run: npm ci
 
+      # Block a release if the shipped (production) dependency tree has a
+      # known high/critical advisory. Dev-only advisories do not block.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Preflight (must pass before publish)
         run: node scripts/preflight.mjs
 

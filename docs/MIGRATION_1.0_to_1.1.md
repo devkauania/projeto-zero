@@ -1,6 +1,6 @@
 # Migration: `@projeto-zero/cli` v1.0.x → v1.1.0
 
-v1.1.0 is a Claude-only lock. The CLI now scaffolds the **Claude Code** native
+v1.1.0 is a Claude-only lock. The CLI now scaffolds a **Claude Code**-oriented
 workspace shape instead of the legacy multi-LLM mixed layout. Legacy agent
 identifiers (`ClaudeCoder`, `AntigravityDesigner`, `AntigravityAuditor`,
 `MCPConfigurator`) are renamed, and the on-disk scaffold emitted by `init` is
@@ -25,8 +25,10 @@ shape, this doc walks you through it.
 | `AntigravityAuditor`  | `auditor`  |
 | `MCPConfigurator`     | `mcp`      |
 
-The new ids are short, lowercase, and map 1:1 to Claude Code's native
-subagent file convention (`.agents/<id>.md`).
+The new ids are short and lowercase. Each subagent file (`.agents/<id>.md`)
+uses the frontmatter Claude Code reads (`name`/`description`/`tools`); Claude
+Code itself discovers project subagents in `.claude/agents/`, so copy them there
+to use them.
 
 ### 2. Scaffold shape
 
@@ -34,7 +36,9 @@ v1.0.x emitted a mixed `src/` starter plus a private `.claude/settings.project.j
 and a per-project `default-wizard-config.json` marker. None of that was Claude
 Code–native.
 
-v1.1.0 emits the layout Claude Code expects at repo root:
+v1.1.0 emits the following layout at the target directory (Claude Code's own
+discovery paths are `.claude/agents/`, `.claude/skills/<id>/SKILL.md` and a root
+`.mcp.json` — see the "What `generate` writes" section of the root README):
 
 ```
 <project>/

@@ -304,13 +304,13 @@ The script lives at [`scripts/session-gate.mjs`](scripts/session-gate.mjs); the 
 apps/cli/src/
 ├── commands/
 │   ├── init.ts           # interactive wizard (TTY + non-TTY paths)
-│   ├── generate.ts       # scaffolder (materialises config → Claude Code layout)
+│   ├── generate.ts       # scaffolder (materialises config → workspace scaffold)
 │   ├── info.ts           # show persisted config
 │   ├── reset.ts          # clear persisted config
 │   └── swarm.ts          # parallel Claude agent launcher (plan + live modes)
 ├── lib/
 │   ├── config.ts         # ANTIGRAVITY_CONFIG_DIR validation, chmod 0600, Conf wrapper
-│   ├── scaffolder.ts     # Claude Code native template emitter
+│   ├── scaffolder.ts     # template emitter (.agents/, skills/, .mcp/ — see root README)
 │   ├── theme.ts          # picocolors-based semantic theme
 │   └── swarm/
 │       ├── safety-envelope.ts    # argv builder + --i-understand gate

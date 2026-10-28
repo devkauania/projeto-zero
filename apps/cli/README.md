@@ -30,7 +30,7 @@ npm install -g @projeto-zero/cli
 
 ## Usage
 
-The CLI is designed to act as an interactive "Setup Wizard" that provisions your project directories and installs essential files natively.
+The CLI is designed to act as an interactive "Setup Wizard" that writes a scaffold of agent, skill, and connector files into a directory you choose.
 
 The standard workflow:
 1. `init`
@@ -55,7 +55,9 @@ npx -y @projeto-zero/cli init
 ```
 
 ### `generate`
-Generates the project files based on the configuration persisted by the `init` command.
+Generates the project files based on the configuration persisted by the `init` command. It writes `CLAUDE.md`, `.agents/prompts/.gitkeep`, and, when templates are enabled, `.agents/<id>.md` plus `skills/<id>/SKILL.md` for each selected agent. It also writes one `.mcp/<connector>.json` descriptor (`id`, `label`, `description`, `tools`) per selected connector.
+
+> Claude Code discovers project subagents in `.claude/agents/`, skills in `.claude/skills/<id>/SKILL.md`, and MCP servers in a root `.mcp.json` (`{"mcpServers": {...}}`). The generated subagent and skill files already use the frontmatter Claude Code reads, so copy them into those folders to use them. The `.mcp/*.json` descriptors have no launch command or URL, so register servers with `claude mcp add --scope project`.
 
 ```bash
 npx -y @projeto-zero/cli generate [options]

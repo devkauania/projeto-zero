@@ -7,6 +7,9 @@ import {
   loadConfig,
   clearConfig,
   getRequiredConnectors,
+  validateWizardConfig,
+  CONNECTOR_ID_RE,
+  ConfigValidationError,
   type WizardConfig,
 } from "../lib/config.js";
 
@@ -189,3 +192,56 @@ async function findFileContaining(
   }
   return null;
 }
+
+// Regression: connector ids from the saved config were trusted and later used
+// as file names, allowing a path escape in `generate`.
+describe("config — connector id validation", () => {
+  const conn = { id: "x", label: "x", description: "x", tools: [], requiredFor: [] };
+
+  it("all seed connector ids are accepted", () => {
+    for (const id of ["supabase", "vercel", "stripe", "figma", "netlify"]) {
+      expect(id).toMatch(CONNECTOR_ID_RE);
+    }
+  });
+
+  it.each([
+    "../../ESCAPED",
+    "..",
+    "a/b",
+    "a\\b",
+    "C:evil",
+    "/abs",
+    "UPPER",
+    "",
+    "x".repeat(33),
+  ])("rejects unsafe id %j", (id) => {
+    expect(() =>
+      validateWizardConfig({
+        projectName: "p",
+        agents: [],
+        includeTemplates: false,
+        mcpConnectors: { [id]: conn },
+      })
+    ).toThrow(ConfigValidationError);
+  });
+
+  it("loadConfig fails closed on a tampered store", async () => {
+    await fs.writeFile(
+      path.join(tmp, "config.json"),
+      JSON.stringify({
+        wizard: {
+          projectName: "p",
+          agents: [],
+          includeTemplates: false,
+          mcpConnectors: { "../../ESCAPED": conn },
+        },
+      })
+    );
+    expect(() => loadConfig()).toThrow(/invalid MCP connector id/);
+  });
+
+  it("loadConfig still returns a valid config unchanged", () => {
+    saveConfig(sample);
+    expect(loadConfig()).toEqual(sample);
+  });
+});

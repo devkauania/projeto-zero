@@ -162,3 +162,53 @@ describe("generate command", { timeout: 15000 }, () => {
     }
   });
 });
+
+// Regression: a connector id from the saved config was used as a file name
+// (.mcp/<id>.json) without validation, so "../../ESCAPED" wrote ESCAPED.json
+// outside the -d target while generate still reported success.
+describe("generate command — connector id path escape", { timeout: 15000 }, () => {
+  let cfgDir: string;
+  let scratch: string;
+
+  beforeEach(async () => {
+    cfgDir = await fs.mkdtemp(path.join(os.tmpdir(), "pz-gen-esc-cfg-"));
+    scratch = await fs.mkdtemp(path.join(os.tmpdir(), "pz-gen-esc-out-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(cfgDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(scratch, { recursive: true, force: true }).catch(() => {});
+  });
+
+  it("refuses a traversal connector id, exits 1 and writes nothing outside -d", async () => {
+    await fs.writeFile(
+      path.join(cfgDir, "config.json"),
+      JSON.stringify({
+        wizard: {
+          projectName: "p",
+          agents: ["coder"],
+          includeTemplates: false,
+          mcpConnectors: {
+            "../../ESCAPED": {
+              id: "x",
+              label: "x",
+              description: "x",
+              tools: [],
+              requiredFor: [],
+            },
+          },
+        },
+      })
+    );
+    const out = path.join(scratch, "gen", "out");
+    const r = await runCli({
+      args: ["generate", "-d", out],
+      env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
+    });
+    expect(r.code).toBe(1);
+    expect(r.stdout + r.stderr).toMatch(/invalid MCP connector id/);
+    expect(fsSync.existsSync(path.join(scratch, "gen", "ESCAPED.json"))).toBe(false);
+    expect(fsSync.existsSync(path.join(scratch, "ESCAPED.json"))).toBe(false);
+    assertNoStackTrace(r.stderr);
+  });
+});

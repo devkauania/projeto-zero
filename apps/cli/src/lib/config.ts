@@ -30,6 +30,55 @@ export interface WizardConfig {
 type StoreSchema = { wizard: WizardConfig | null };
 
 /**
+ * Allowed shape of an MCP connector id. Connector ids become file names
+ * (`.mcp/<id>.json`) in `scaffoldProject`, so anything that could escape the
+ * target directory (`..`, `/`, `\`, drive letters) must be refused. All seed
+ * ids (supabase, vercel, stripe, figma, netlify) match.
+ */
+export const CONNECTOR_ID_RE = /^[a-z0-9_-]{1,32}$/;
+
+/** Thrown when a saved wizard config has an unsafe or malformed shape. */
+export class ConfigValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigValidationError";
+  }
+}
+
+/** Throws ConfigValidationError unless `id` is a safe connector id. */
+export function assertValidConnectorId(id: unknown): asserts id is string {
+  if (typeof id !== "string" || !CONNECTOR_ID_RE.test(id)) {
+    throw new ConfigValidationError(
+      `invalid MCP connector id ${JSON.stringify(id)} (must match ${CONNECTOR_ID_RE})`
+    );
+  }
+}
+
+/**
+ * Light shape check for a wizard config read from disk. Fails closed with a
+ * clear error instead of silently dropping entries, so a tampered config is
+ * visible to the user.
+ */
+export function validateWizardConfig(config: unknown): asserts config is WizardConfig {
+  if (config === null || typeof config !== "object" || Array.isArray(config)) {
+    throw new ConfigValidationError("saved configuration is not an object");
+  }
+  const c = config as Record<string, unknown>;
+  if (c.agents !== undefined && !Array.isArray(c.agents)) {
+    throw new ConfigValidationError("saved configuration: agents must be an array");
+  }
+  if (c.mcpConnectors !== undefined) {
+    const m = c.mcpConnectors;
+    if (m === null || typeof m !== "object" || Array.isArray(m)) {
+      throw new ConfigValidationError(
+        "saved configuration: mcpConnectors must be an object"
+      );
+    }
+    for (const id of Object.keys(m)) assertValidConnectorId(id);
+  }
+}
+
+/**
  * Acceptable prefixes for an `ANTIGRAVITY_CONFIG_DIR` override. We confine
  * the Conf data dir to either the user's home or a system temp dir. This
  * is vulnerability-ledger row 8: without the check, a malicious or
@@ -136,8 +185,16 @@ export function saveConfig(config: WizardConfig): void {
   hardenConfFile(store);
 }
 
+/**
+ * Load the saved wizard config. Throws ConfigValidationError if the stored
+ * config is malformed, e.g. a connector id that would escape the target
+ * directory when `generate` writes `.mcp/<id>.json`.
+ */
 export function loadConfig(): WizardConfig | null {
-  return getStore().get("wizard");
+  const config = getStore().get("wizard");
+  if (config === null || config === undefined) return null;
+  validateWizardConfig(config);
+  return config;
 }
 
 export function clearConfig(): void {

@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import type { WizardConfig } from "./config.js";
+import { assertValidConnectorId, type WizardConfig } from "./config.js";
 import { ensureDir, writeJsonFile } from "./fs-utils.js";
 
 /**
@@ -236,6 +236,14 @@ export async function scaffoldProject(
   const root = path.resolve(targetDir);
   const created: string[] = [];
 
+  // Validate connector ids BEFORE writing anything. Ids become file names
+  // (.mcp/<id>.json); a crafted id such as "../../x" would otherwise write
+  // outside the target directory. Checked here (the sink) so every caller is
+  // covered, not only configs that went through loadConfig().
+  for (const id of Object.keys(config.mcpConnectors ?? {})) {
+    assertValidConnectorId(id);
+  }
+
   // Core directories (Claude Code convention).
   for (const dir of [".agents", ".agents/prompts", "skills"]) {
     const full = path.join(root, dir);
@@ -277,7 +285,12 @@ export async function scaffoldProject(
     const mcpDir = path.join(root, ".mcp");
     if (await ensureDir(mcpDir)) created.push(".mcp/");
     for (const [id, connector] of Object.entries(config.mcpConnectors)) {
-      const filePath = path.join(mcpDir, `${id}.json`);
+      const filePath = path.resolve(mcpDir, `${id}.json`);
+      // Defence in depth: the resolved file must sit directly inside .mcp/.
+      const rel = path.relative(mcpDir, filePath);
+      if (rel.startsWith("..") || path.isAbsolute(rel) || rel.includes(path.sep)) {
+        throw new Error(`refusing to write connector file outside .mcp/: ${JSON.stringify(id)}`);
+      }
       await writeJsonFile(filePath, {
         id: connector.id,
         label: connector.label,

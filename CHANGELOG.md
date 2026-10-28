@@ -26,6 +26,13 @@ All notable changes to this project will be documented in this file.
   Bash(wget:*) Bash(ssh:*) WebFetch WebSearch`; verify mode allows
   `Read Grep Glob Bash(git diff:*)`. User-supplied `--allowed-tools` /
   `--disallowed-tools` rules are validated and malformed ones are refused.
+- `generate` could write outside the target directory. Connector ids from the
+  saved config became file names (`.mcp/<id>.json`) unchecked, so an id such
+  as `../../ESCAPED` wrote `ESCAPED.json` outside `-d` while still reporting
+  success. Ids must now match `^[a-z0-9_-]{1,32}$` (all seed ids do);
+  `loadConfig()` and `scaffoldProject()` both refuse anything else before
+  writing, and the write itself is checked to stay inside `.mcp/`. `reset`
+  can still clear a config that fails this check.
 
 ### Removed
 - `swarm --temperature`: Claude Code has no temperature flag, so the option

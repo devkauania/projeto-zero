@@ -174,3 +174,34 @@ describe("scaffoldProject — template drift guard", () => {
     }
   });
 });
+
+// Regression: scaffoldProject used path.join(mcpDir, `${id}.json`) with the
+// raw connector id, so "../../ESCAPED" wrote outside the target directory.
+describe("scaffoldProject — connector id confinement", () => {
+  it("throws before writing anything when a connector id escapes .mcp/", async () => {
+    const target = path.join(tmp, "gen", "out");
+    const cfg = baseConfig({
+      mcpConnectors: {
+        "../../ESCAPED": {
+          id: "x",
+          label: "x",
+          description: "x",
+          tools: [],
+          requiredFor: [],
+        },
+      },
+    });
+    await expect(scaffoldProject(cfg, target)).rejects.toThrow(
+      /invalid MCP connector id/
+    );
+    await expect(fs.access(path.join(tmp, "gen", "ESCAPED.json"))).rejects.toThrow();
+    // Fails before the first write: the target dir was never created.
+    await expect(fs.access(target)).rejects.toThrow();
+  });
+
+  it("still writes .mcp/<id>.json for valid ids", async () => {
+    const created = await scaffoldProject(baseConfig(), tmp);
+    expect(created).toContain(".mcp/supabase.json");
+    await fs.access(path.join(tmp, ".mcp", "supabase.json"));
+  });
+});

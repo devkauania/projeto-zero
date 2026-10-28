@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
-import { clearConfig, loadConfig } from "../lib/config.js";
+import { ConfigValidationError, clearConfig, loadConfig } from "../lib/config.js";
 import { theme } from "../lib/theme.js";
 
 export const resetCommand = new Command("reset")
@@ -18,9 +18,15 @@ export const resetCommand = new Command("reset")
     try {
       existing = loadConfig();
     } catch (err) {
-      p.log.error(theme.error(String(err instanceof Error ? err.message : err)));
-      p.outro(theme.muted("Aborted."));
-      process.exit(1);
+      // A malformed (possibly tampered) config must still be clearable.
+      if (err instanceof ConfigValidationError) {
+        p.log.warning(theme.warning(`Saved configuration is invalid: ${err.message}`));
+        existing = true;
+      } else {
+        p.log.error(theme.error(String(err instanceof Error ? err.message : err)));
+        p.outro(theme.muted("Aborted."));
+        process.exit(1);
+      }
     }
     if (!existing) {
       p.note(theme.muted("No configuration to clear."), "Nothing to do");

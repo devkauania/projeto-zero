@@ -99,6 +99,9 @@ All notable changes to this project will be documented in this file.
   details, so security and Code of Conduct reports have a private path even
   when GitHub private vulnerability reporting is not enabled. `SECURITY.md`,
   the Code of Conduct and the issue chooser now point to it.
+- `docs/ARCHITECTURE.md` section 7 now describes what `session-gate` actually
+  checks (`apps/cli/VERIFICATION.md`), says CI does not run it, and states
+  its limitation: it trusts the `Co-Authored-By` trailer.
 
 ## [1.1.3] - 2026-04-17
 

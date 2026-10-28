@@ -295,11 +295,13 @@ The release workflow in [`.github/workflows/release.yml`](../.github/workflows/r
 
 **Problem.** When a work session has verification checkboxes ("[ ] all tests pass → [x] all tests pass"), an LLM can flip them without actually doing the work — the checkbox edit is indistinguishable from a real verification in a diff.
 
-**Decision.** The `session-gate` script greps every verification-checkbox flip from `[ ]` to `[x]` in `.agents/handoffs/` and `.agents/validations/`, then uses `git blame` + commit metadata to check **who authored the flip**. A checkbox authored by a commit with `Co-Authored-By: Claude` is considered unverified. A human-authored commit is the required signal.
+**Decision.** The `session-gate` script reads the manual verification table in [`apps/cli/VERIFICATION.md`](../apps/cli/VERIFICATION.md). For every row whose **Feels right?** column is `[x]`, it runs `git blame` on that line and reads the message of the commit that introduced it. If that message contains `Co-Authored-By: Claude`, or the flip is not committed yet, the gate fails. A human-authored commit is the required signal. The same script also runs preflight and checks that a `[!]` (bug) row links an issue.
 
-The script lives at [`scripts/session-gate.mjs`](../scripts/session-gate.mjs); the CI integration is the `session-gate` hook referenced in [`apps/cli/VERIFICATION.md`](../apps/cli/VERIFICATION.md).
+The script lives at [`scripts/session-gate.mjs`](../scripts/session-gate.mjs). CI does not run it: [`ci.yml`](../.github/workflows/ci.yml) runs `npm ci`, preflight and verdict only. Run it locally with `npm run gate` (or `node scripts/session-gate.mjs`), as [`apps/cli/VERIFICATION.md`](../apps/cli/VERIFICATION.md) says.
 
-**Why `git blame` instead of "just asking Claude to not cheat".** An agent that can edit files can also edit its own instructions. `git blame` is out-of-band — it reads the commit author metadata set by `git commit`, which the agent can't retroactively forge for prior commits (without breaking signature chains or getting caught by the "Co-Authored-By" detection). It is a mechanical, external source of truth.
+**Why `git blame` instead of "just asking Claude to not cheat".** An agent that can edit files can also edit its own instructions. `git blame` reads commit metadata from history, which is outside the file the agent is editing, so rewording the checklist does not change the result.
+
+**Limitation.** The check trusts the commit trailer. It catches an agent commit that follows the convention of adding `Co-Authored-By: Claude`; a commit made by an agent without that trailer reads as human-authored and passes. Commits are not signed, so authorship is a convention here, not a proof.
 
 ## 8. Repo map for the curious
 

@@ -53,7 +53,7 @@ interface RunOptions {
   env?: Record<string, string>;
   /** Bytes to pre-feed on stdin before any kill. */
   stdinChunks?: string[];
-  /** ms after spawn before sending SIGINT. */
+  /** ms after the CLI's first stdout write before sending SIGINT. */
   sigintAfterMs?: number;
   /** Hard kill if the child outlives this. */
   timeoutMs?: number;
@@ -72,8 +72,25 @@ function runCli(opts: RunOptions): Promise<RunResult> {
 
     let stdout = "";
     let stderr = "";
+    let sigintTimer: NodeJS.Timeout | undefined;
+    // The SIGINT clock starts when the CLI first writes to stdout (its
+    // banner), not at spawn. Counting from spawn made the test measure
+    // Node/module start-up time: on a loaded machine the signal could land
+    // before any prompt existed, and on Windows (where kill("SIGINT") is
+    // TerminateProcess) that showed up as a sporadic exit code 1.
+    const armSigint = () => {
+      if (sigintTimer || typeof opts.sigintAfterMs !== "number") return;
+      sigintTimer = setTimeout(() => {
+        try {
+          child.kill("SIGINT");
+        } catch {
+          /* ignore */
+        }
+      }, opts.sigintAfterMs);
+    };
     child.stdout.on("data", (d: Buffer) => {
       stdout += d.toString("utf8");
+      armSigint();
     });
     child.stderr.on("data", (d: Buffer) => {
       stderr += d.toString("utf8");
@@ -83,17 +100,6 @@ function runCli(opts: RunOptions): Promise<RunResult> {
       for (const chunk of opts.stdinChunks) {
         child.stdin.write(chunk);
       }
-    }
-
-    let sigintTimer: NodeJS.Timeout | undefined;
-    if (typeof opts.sigintAfterMs === "number") {
-      sigintTimer = setTimeout(() => {
-        try {
-          child.kill("SIGINT");
-        } catch {
-          /* ignore */
-        }
-      }, opts.sigintAfterMs);
     }
 
     const hardTimer = setTimeout(() => {

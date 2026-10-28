@@ -64,7 +64,8 @@ maintainer ([@devkauania](https://github.com/devkauania)). To report
 privately, use the repository's private reporting form
 ([Security → Report a vulnerability](https://github.com/devkauania/projeto-zero/security/advisories/new)),
 which only the maintainer can read, and say in the title that it is a
-Code of Conduct report.
+Code of Conduct report. If the form is not available, open an issue that
+only asks for a private contact, without details.
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

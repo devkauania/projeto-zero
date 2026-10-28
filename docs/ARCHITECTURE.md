@@ -23,7 +23,7 @@ The most interesting piece is the **swarm** — a command that spawns multiple C
 
 **Decision.** Every child-process spawn in the codebase takes an **argv array** and is called with `shell: false`. Prompt bodies never touch argv — they are streamed to the child's stdin. A regex test in the test suite greps the spawner source for any future `argv.join(` or `shell: true` and fails the build if one slips in.
 
-From [`apps/cli/src/lib/swarm/agent-spawner.ts:92`](apps/cli/src/lib/swarm/agent-spawner.ts):
+From [`apps/cli/src/lib/swarm/agent-spawner.ts`](../apps/cli/src/lib/swarm/agent-spawner.ts):
 
 ```ts
 const proc = spawn(bin, argv, {
@@ -45,7 +45,7 @@ try {
 
 **Why this shape.** Node's `child_process.spawn` has two modes. With `shell: true` (or `child_process.exec`), argv is concatenated and handed to `/bin/sh -c`. With `shell: false` + an argv array, the kernel's `execve` receives the arguments as a C-string array — the shell never runs, so there is nothing to inject *into*. The prompt body going via stdin means even if an attacker controlled a prompt's entire contents, they couldn't shape argv.
 
-The adversarial test in [`apps/cli/src/__tests__/swarm-spawner.test.ts:41`](apps/cli/src/__tests__/swarm-spawner.test.ts):
+The adversarial test in [`apps/cli/src/__tests__/swarm-spawner.test.ts`](../apps/cli/src/__tests__/swarm-spawner.test.ts):
 
 ```ts
 it("source file does not invoke spawn with shell:true", () => {
@@ -70,7 +70,7 @@ This is "last-line" defense — the *primary* control is the API shape (the func
 
 **Decision.** The child env is built from an explicit **allowlist** of 11 variable names — everything else is stripped. The allowlist change is gated behind a unit test that asserts the length, so growing the list requires a conscious review.
 
-From [`apps/cli/src/lib/swarm/agent-spawner.ts:24`](apps/cli/src/lib/swarm/agent-spawner.ts):
+From [`apps/cli/src/lib/swarm/agent-spawner.ts`](../apps/cli/src/lib/swarm/agent-spawner.ts):
 
 ```ts
 export const CHILD_ENV_ALLOWLIST: readonly string[] = Object.freeze([
@@ -99,7 +99,7 @@ export function filterChildEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 
 **Why an allowlist instead of a denylist.** Denylists age badly — the moment a new credential env var enters the ecosystem (`CLAUDE_OPUS_TOKEN`, say), the denylist is silently wrong and the secret leaks. Allowlists fail closed: new variables simply don't forward until someone reviews them.
 
-The length-lock test in [`apps/cli/src/__tests__/swarm-spawner.test.ts:34`](apps/cli/src/__tests__/swarm-spawner.test.ts):
+The length-lock test in [`apps/cli/src/__tests__/swarm-spawner.test.ts`](../apps/cli/src/__tests__/swarm-spawner.test.ts):
 
 ```ts
 it("allowlist is deliberately short (tokens stay on the parent)", () => {
@@ -116,7 +116,7 @@ The test fails if someone silently adds an entry, which forces a PR review on an
 
 **Decision.** The safety envelope's argv builder **refuses** to emit `bypassPermissions` unless both the explicit flag and a secondary `--i-understand` flag are set. `verify` mode is additionally locked to `plan` (read-only) regardless of caller intent. This is a single-source-of-truth — every spawn path in the codebase funnels through this builder.
 
-From [`apps/cli/src/lib/swarm/safety-envelope.ts:126`](apps/cli/src/lib/swarm/safety-envelope.ts):
+From [`apps/cli/src/lib/swarm/safety-envelope.ts`](../apps/cli/src/lib/swarm/safety-envelope.ts):
 
 ```ts
 // Resolve permission mode. Verify mode is always `plan`. Work mode defaults
@@ -156,7 +156,7 @@ if (issue && !issue.startsWith("permissionMode=bypassPermissions")) {
 
 **Decision.** Worktree names are validated against a tight regex (`/^[a-zA-Z0-9_-]{1,32}$/`), and the resolved absolute path is checked against the repo root using `path.relative`. Anything that resolves outside the repo is refused.
 
-From [`apps/cli/src/lib/swarm/worktree-manager.ts:16`](apps/cli/src/lib/swarm/worktree-manager.ts):
+From [`apps/cli/src/lib/swarm/worktree-manager.ts`](../apps/cli/src/lib/swarm/worktree-manager.ts):
 
 ```ts
 const NAME_RE = /^[a-zA-Z0-9_-]{1,32}$/;
@@ -195,7 +195,7 @@ if (rel.startsWith("..") || path.isAbsolute(rel)) {
 1. `lstat` the path — if it's a symlink, refuse. (Blocks the classic "point env var at a symlink to `~/.ssh`" attack.)
 2. Compute `path.relative` from `os.homedir()` and `os.tmpdir()` — at least one must be an ancestor. Anything outside both is refused.
 
-From [`apps/cli/src/lib/config.ts:57`](apps/cli/src/lib/config.ts):
+From [`apps/cli/src/lib/config.ts`](../apps/cli/src/lib/config.ts):
 
 ```ts
 function validateConfigDir(override: string): string {
@@ -252,11 +252,11 @@ function hardenConfFile(store: Conf<StoreSchema>): void {
 
 **Decision.** `PRODUCTION-READY` is a pure function of a set of scriptable gates. The release script runs the gates, and returns the verdict mechanically. No natural-language reasoning is involved in the decision.
 
-Current gate set (from [`scripts/preflight.mjs`](scripts/preflight.mjs)):
+Current gate set (from [`scripts/preflight.mjs`](../scripts/preflight.mjs)):
 
 - **build** — `turbo build` across all workspaces
 - **lint** — `turbo lint`
-- **test** — `turbo test` (91 tests across 13 files at time of writing)
+- **test** — `turbo test` (the Vitest suite; several suites spawn the built CLI)
 - **files-exist** — every path listed in `apps/cli/package.json#files` resolves on disk
 - **pack-sanity** — `npm pack --dry-run` has the expected file count, size, and no forbidden patterns
 - **repo-metadata** — package.json has valid `name`, `version`, `description`, `repository`, `license`, etc.
@@ -264,8 +264,9 @@ Current gate set (from [`scripts/preflight.mjs`](scripts/preflight.mjs)):
 - **check-no-self-dep** — package.json does not depend on itself (CI guard after a real v1.0.0 bug)
 - **check-non-tty-connectors** — static tripwire on the non-TTY default for MCP connectors (CI guard after a real v1.0.0 bug)
 - **single-family LLM lock** — live product surface references only Claude, not other LLM vendors (enforces the project's single-family policy)
+- **check-workflows** — every GitHub Action is pinned to a full commit SHA, every workflow declares top-level `permissions:` (never `write-all`), no `pull_request_target`, `id-token: write` only in `release.yml`, and the release gates (production `npm audit`, `--ignore-scripts` publish, minimum Node/npm versions) are still present
 
-The release workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) runs `preflight` before it ever reaches `npm publish`:
+The release workflow in [`.github/workflows/release.yml`](../.github/workflows/release.yml) runs `preflight` before it ever reaches `npm publish`:
 
 ```yaml
 - name: Preflight (must pass before publish)
@@ -283,7 +284,9 @@ The release workflow in [`.github/workflows/release.yml`](.github/workflows/rele
 
 - name: Publish with provenance
   working-directory: apps/cli
-  run: npm publish --provenance --access public
+  run: npm publish --provenance --access public --ignore-scripts
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
 
 **Why this matters for an agent-first codebase.** If you let an LLM grade its own homework, it will pass. Gates are the grading rubric that doesn't know how to be charming.
@@ -294,7 +297,7 @@ The release workflow in [`.github/workflows/release.yml`](.github/workflows/rele
 
 **Decision.** The `session-gate` script greps every verification-checkbox flip from `[ ]` to `[x]` in `.agents/handoffs/` and `.agents/validations/`, then uses `git blame` + commit metadata to check **who authored the flip**. A checkbox authored by a commit with `Co-Authored-By: Claude` is considered unverified. A human-authored commit is the required signal.
 
-The script lives at [`scripts/session-gate.mjs`](scripts/session-gate.mjs); the CI integration is the `session-gate` hook referenced in [`apps/cli/VERIFICATION.md`](apps/cli/VERIFICATION.md).
+The script lives at [`scripts/session-gate.mjs`](../scripts/session-gate.mjs); the CI integration is the `session-gate` hook referenced in [`apps/cli/VERIFICATION.md`](../apps/cli/VERIFICATION.md).
 
 **Why `git blame` instead of "just asking Claude to not cheat".** An agent that can edit files can also edit its own instructions. `git blame` is out-of-band — it reads the commit author metadata set by `git commit`, which the agent can't retroactively forge for prior commits (without breaking signature chains or getting caught by the "Co-Authored-By" detection). It is a mechanical, external source of truth.
 
@@ -316,8 +319,9 @@ apps/cli/src/
 │       ├── safety-envelope.ts    # argv builder + --i-understand gate
 │       ├── agent-spawner.ts      # the only place spawn() is called
 │       ├── worktree-manager.ts   # NAME_RE + path-relative containment
+│       ├── agent-outcome.ts      # success = exit 0 + valid stream-json + successful result event
 │       └── prompt-browser.ts     # .agents/prompts/*.md discovery
-└── __tests__/            # vitest suite — 91 tests, 13 files
+└── __tests__/            # Vitest suites (some spawn the built CLI)
 
 scripts/
 ├── preflight.mjs         # orchestrates every gate below
@@ -329,7 +333,10 @@ scripts/
 ├── files-exist.mjs
 ├── check-no-self-dep.mjs
 ├── check-non-tty-connectors.mjs
-└── check-no-multi-llm.mjs
+├── check-no-multi-llm.mjs
+├── check-workflows.mjs   # GitHub Actions hardening guard
+├── record-demo.mjs       # records a real CLI run for the README demo
+└── render-terminal-svg.mjs
 
 audit/
 ├── phase1-recon-v1.1.0.md
@@ -343,7 +350,7 @@ audit/
 
 ## Where to go next
 
-- [`apps/cli/README.md`](apps/cli/README.md) — user-facing CLI docs
+- [`apps/cli/README.md`](../apps/cli/README.md) — user-facing CLI docs
 - [`docs/SWARM.md`](SWARM.md) — swarm command quickstart and safety defaults
 - [`docs/MIGRATION_1.0_to_1.1.md`](MIGRATION_1.0_to_1.1.md) — breaking changes between versions
 - [`audit/vulnerability-ledger.md`](../audit/vulnerability-ledger.md) — security findings + closure evidence

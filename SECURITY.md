@@ -20,6 +20,10 @@ Report it privately through GitHub:
 [Security → Report a vulnerability](https://github.com/devkauania/projeto-zero/security/advisories/new).
 Only the maintainer can see the report.
 
+If that form is not available, open an issue that only asks for a private
+contact (no details of the problem). The maintainer will open a draft
+security advisory and invite you to it, which is just as private.
+
 A useful report says:
 
 - the version (`projeto-zero --version`) and your OS / Node.js version,

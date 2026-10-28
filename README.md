@@ -11,7 +11,7 @@ Published on npm as [`@projeto-zero/cli`](https://www.npmjs.com/package/@projeto
 
 ![A recorded run of projeto-zero: init, generate, git status, then swarm --count 2 --dry-run printing two agent plans with their worktrees and Claude Code argv](docs/demo.svg)
 
-<sub>Recorded from this repo's build with `npm run demo` ([`scripts/record-demo.mjs`](scripts/record-demo.mjs)): all program output is real and unedited except that trailing blank lines are trimmed and the temp directory is shortened to `<tmp>` (recorded on Windows, hence the backslashes); the script adds only the `$` command lines and the `#` note. Plain-text copy: [`docs/demo.txt`](docs/demo.txt).</sub>
+<sub>Recorded from this repo's `main` build with `npm run demo` ([`scripts/record-demo.mjs`](scripts/record-demo.mjs)). `main` carries unreleased fixes on top of 1.1.3, so `--version` prints 1.1.3 while the swarm argv shown is the fixed one (see the note under [Quickstart](#quickstart)). All program output is real and unedited except that trailing blank lines are trimmed and the temp directory is shortened to `<tmp>` (recorded on Windows, hence the backslashes); the script adds only the `$` command lines and the `#` note. Plain-text copy: [`docs/demo.txt`](docs/demo.txt).</sub>
 
 ## Why
 

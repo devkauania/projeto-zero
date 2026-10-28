@@ -6,7 +6,7 @@ import {
   DEFAULT_DISALLOWED_TOOLS,
   DEFAULT_MAX_TURNS,
   DEFAULT_MAX_BUDGET_USD,
-  DEFAULT_TEMPERATURE,
+  CLAUDE_CLI_FLAGS,
 } from "../lib/swarm/safety-envelope.js";
 
 const base = {
@@ -69,7 +69,6 @@ describe("safety-envelope — defaults", () => {
     ]);
     expect(built.effective.maxTurns).toBe(DEFAULT_MAX_TURNS);
     expect(built.effective.maxBudgetUsd).toBe(DEFAULT_MAX_BUDGET_USD);
-    expect(built.effective.temperature).toBe(DEFAULT_TEMPERATURE);
   });
 
   it("argv contains --output-format stream-json and --session-id", () => {
@@ -80,14 +79,13 @@ describe("safety-envelope — defaults", () => {
     expect(built.argv).toContain(base.sessionId);
   });
 
-  it("prompt body is NEVER on argv — only the prompt file path", () => {
+  it("prompt is NEVER on argv — neither its body nor its path (stdin only)", () => {
     const built = buildClaudeArgv({ ...base, mode: "work" });
-    // argv must contain --prompt-file followed by the path. It must NOT
-    // contain a flag like --prompt with inline content.
-    const promptFileIdx = built.argv.indexOf("--prompt-file");
-    expect(promptFileIdx).toBeGreaterThanOrEqual(0);
-    expect(built.argv[promptFileIdx + 1]).toBe(base.promptFile);
     expect(built.argv).not.toContain("--prompt");
+    expect(built.argv).not.toContain("--prompt-file");
+    expect(built.argv).not.toContain(base.promptFile);
+    // The worktree is the spawn cwd, not an argv flag.
+    expect(built.argv).not.toContain(base.workingDir);
   });
 });
 
@@ -111,23 +109,21 @@ describe("safety-envelope — input validation", () => {
     ).toThrow(/invalid mode/);
   });
 
-  it("clamps nonsense maxTurns/maxBudgetUsd/temperature to defaults", () => {
+  it("clamps nonsense maxTurns/maxBudgetUsd to defaults", () => {
     const built = buildClaudeArgv({
       ...base,
       mode: "work",
       maxTurns: -5,
       maxBudgetUsd: 0,
-      temperature: 99,
     });
     expect(built.effective.maxTurns).toBe(DEFAULT_MAX_TURNS);
     expect(built.effective.maxBudgetUsd).toBe(DEFAULT_MAX_BUDGET_USD);
-    expect(built.effective.temperature).toBe(DEFAULT_TEMPERATURE);
   });
 });
 
 describe("auditArgv", () => {
   it("flags shell metacharacters in argv tokens", () => {
-    const argv = ["--prompt-file", "/tmp/p.md; rm -rf /"];
+    const argv = ["--session-id", "x; rm -rf /"];
     expect(auditArgv(argv)).toMatch(/suspicious shell metacharacter/);
   });
 
@@ -145,5 +141,60 @@ describe("auditArgv", () => {
     });
     const msg = auditArgv(built.argv);
     expect(msg).toMatch(/bypassPermissions/);
+  });
+});
+
+describe("safety-envelope — Claude Code CLI contract (regression: invalid flags)", () => {
+  // Regression for the bug where the envelope emitted --temperature,
+  // --working-dir and --prompt-file (none exist in Claude Code; the CLI
+  // exited 1 with "unknown option") and omitted -p, so --live never ran.
+  const modes = [
+    { mode: "work" as const },
+    { mode: "verify" as const },
+    { mode: "work" as const, permissionMode: "bypassPermissions" as const, iUnderstand: true },
+  ];
+
+  it("emits only flags recorded from the real Claude Code CLI", () => {
+    for (const m of modes) {
+      const { argv } = buildClaudeArgv({ ...base, ...m });
+      const flags = argv.filter((t) => t.startsWith("-"));
+      for (const f of flags) {
+        expect(CLAUDE_CLI_FLAGS, `unknown flag ${f}`).toContain(f);
+      }
+    }
+  });
+
+  it("never emits the non-existent --temperature/--working-dir/--prompt-file", () => {
+    for (const m of modes) {
+      const { argv } = buildClaudeArgv({ ...base, ...m });
+      expect(argv).not.toContain("--temperature");
+      expect(argv).not.toContain("--working-dir");
+      expect(argv).not.toContain("--prompt-file");
+    }
+  });
+
+  it("runs in print mode with --verbose (required for stream-json under -p)", () => {
+    const { argv } = buildClaudeArgv({ ...base, mode: "work" });
+    expect(argv[0]).toBe("-p");
+    expect(argv).toContain("--verbose");
+    const i = argv.indexOf("--output-format");
+    expect(argv[i + 1]).toBe("stream-json");
+  });
+
+  it("every flag that takes a value is followed by a non-flag token", () => {
+    const { argv } = buildClaudeArgv({ ...base, mode: "work" });
+    for (const f of [
+      "--output-format",
+      "--permission-mode",
+      "--allowed-tools",
+      "--disallowed-tools",
+      "--max-turns",
+      "--max-budget-usd",
+      "--session-id",
+    ]) {
+      const i = argv.indexOf(f);
+      expect(i, f).toBeGreaterThanOrEqual(0);
+      expect(argv[i + 1]?.startsWith("-"), f).toBe(false);
+    }
   });
 });

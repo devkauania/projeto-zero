@@ -4,7 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- `swarm --live` could never run an agent and still reported success. The
+  safety envelope emitted `--temperature`, `--working-dir` and
+  `--prompt-file`, which do not exist in Claude Code (the child exits 1 with
+  "unknown option"), and it never passed `-p`. The argv is now
+  `claude -p --verbose --output-format stream-json --permission-mode ...
+  --allowed-tools ... --disallowed-tools ... --max-turns ... --max-budget-usd
+  ... --session-id ...`; the prompt goes through stdin and the worktree is the
+  spawn `cwd`. A contract test checks every emitted flag against a recorded
+  list of real Claude Code flags.
+- `swarm --live` no longer reports a false success. An agent now only counts
+  as successful if it exits 0, its stdout is valid stream-json and it ends
+  with a successful `result` event. Otherwise the run prints the reason per
+  agent, says `FAILED` and exits 1 (previously only spawn errors counted).
+
 ### Removed
+- `swarm --temperature`: Claude Code has no temperature flag, so the option
+  never had any effect other than breaking `--live`.
 - `apps/cli/src/lib/swarm/budget-meter.ts`: dead code. Only its own unit test
   imported it, and the swarm launcher never used it. Per-agent spend is still
   bounded by the `--max-budget-usd` flag passed to each child `claude` process.

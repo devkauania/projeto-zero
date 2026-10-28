@@ -6,8 +6,20 @@
 // `--i-understand` at the top-level CLI. A unit test asserts this invariant.
 //
 // Threat model (ledger row 4 — argv injection in swarm spawner):
-//   - Prompt content is NEVER placed on argv. It is passed via stdin or a
-//     `--prompt-file` path written by this process.
+//   - Prompt content is NEVER placed on argv. The spawner streams the prompt
+//     file's body to the child's stdin (`claude -p` reads the prompt from
+//     stdin when no positional prompt is given).
+//   - The agent's working directory is the spawn `cwd`, not a flag.
+//
+// Every flag emitted here must exist in the real Claude Code CLI. The list of
+// flags we rely on is recorded in CLAUDE_CLI_FLAGS below and checked by
+// swarm-safety-envelope.test.ts. Reference (verified 2026-10-28 against
+// https://code.claude.com/docs/en/cli-reference and `claude --help` of
+// Claude Code 2.1.310): `-p/--print`, `--verbose`, `--output-format`,
+// `--permission-mode`, `--allowed-tools`, `--disallowed-tools`,
+// `--max-turns`, `--max-budget-usd`, `--session-id`. Claude Code has NO
+// `--temperature`, `--working-dir` or `--prompt-file` flag; passing any of
+// them makes the CLI exit 1 with "unknown option".
 //   - The returned argv is an array. Callers MUST pass it directly to
 //     `child_process.spawn(cmd, argv, { shell: false })`. Callers MUST NOT
 //     concatenate argv into a shell string.
@@ -29,7 +41,11 @@ export interface SafetyEnvelopeInput {
   /** Absolute path to the per-agent git worktree. Spawner sets cwd to this path. */
   workingDir: string;
 
-  /** Path to the prompt file the agent reads. Must exist on disk. */
+  /**
+   * Path to the prompt file. NOT placed on argv: the spawner streams its body
+   * to the child's stdin. Kept here so the plan records which prompt an agent
+   * gets.
+   */
   promptFile: string;
 
   /** work = acceptEdits; verify = plan (read-only). */
@@ -55,9 +71,6 @@ export interface SafetyEnvelopeInput {
 
   /** Max USD spend per agent. Default: 5.00. */
   maxBudgetUsd?: number;
-
-  /** Sampling temperature. Default: 0.2. */
-  temperature?: number;
 }
 
 export interface BuiltEnvelope {
@@ -70,7 +83,6 @@ export interface BuiltEnvelope {
     disallowedTools: string[];
     maxTurns: number;
     maxBudgetUsd: number;
-    temperature: number;
     mode: SwarmMode;
   };
 }
@@ -93,7 +105,25 @@ export const DEFAULT_DISALLOWED_TOOLS = Object.freeze([
 
 export const DEFAULT_MAX_TURNS = 20;
 export const DEFAULT_MAX_BUDGET_USD = 5.0;
-export const DEFAULT_TEMPERATURE = 0.2;
+
+/**
+ * Long flags of the real Claude Code CLI that this envelope is allowed to
+ * emit. `--max-turns` is documented in the CLI reference (print mode only)
+ * even though `claude --help` does not list it. Exported for the contract
+ * test; extend it only after checking the official CLI reference.
+ */
+export const CLAUDE_CLI_FLAGS = Object.freeze([
+  "-p",
+  "--print",
+  "--verbose",
+  "--output-format",
+  "--permission-mode",
+  "--allowed-tools",
+  "--disallowed-tools",
+  "--max-turns",
+  "--max-budget-usd",
+  "--session-id",
+]);
 
 /** Verify mode is strictly read-only regardless of what the caller asked for. */
 const VERIFY_ALLOWED_TOOLS = Object.freeze(["read_file", "bash(git:diff*)"]);
@@ -160,37 +190,31 @@ export function buildClaudeArgv(input: SafetyEnvelopeInput): BuiltEnvelope {
       ? input.maxBudgetUsd
       : DEFAULT_MAX_BUDGET_USD;
 
-  const temperature =
-    typeof input.temperature === "number" &&
-    input.temperature >= 0 &&
-    input.temperature <= 2
-      ? input.temperature
-      : DEFAULT_TEMPERATURE;
-
-  // Argv construction. Arrays only. Prompt body is NEVER on argv — we pass
-  // the prompt file path, and the spawner streams the body via stdin for
-  // defense in depth against any future argv logger leaking prompts.
+  // Argv construction. Arrays only. Prompt body is NEVER on argv — the
+  // spawner pipes it to stdin, and the worktree is the spawn cwd.
+  // `-p` (print / non-interactive) is required: --output-format,
+  // --max-turns and --max-budget-usd only work with it, and stream-json
+  // output under -p requires --verbose. Each tool rule is its own argv
+  // element (the CLI's --allowed-tools/--disallowed-tools take a variadic
+  // list), so a rule containing a space such as `Bash(git diff:*)` is never
+  // split.
   const argv: string[] = [
+    "-p",
+    "--verbose",
+    "--output-format",
+    "stream-json",
     "--permission-mode",
     permissionMode,
     "--allowed-tools",
-    allowedTools.join(","),
+    ...allowedTools,
     "--disallowed-tools",
-    disallowedTools.join(","),
+    ...disallowedTools,
     "--max-turns",
     String(maxTurns),
     "--max-budget-usd",
     maxBudgetUsd.toFixed(2),
-    "--temperature",
-    String(temperature),
-    "--output-format",
-    "stream-json",
     "--session-id",
     input.sessionId,
-    "--working-dir",
-    input.workingDir,
-    "--prompt-file",
-    input.promptFile,
   ];
 
   return {
@@ -201,7 +225,6 @@ export function buildClaudeArgv(input: SafetyEnvelopeInput): BuiltEnvelope {
       disallowedTools,
       maxTurns,
       maxBudgetUsd,
-      temperature,
       mode: input.mode,
     },
   };

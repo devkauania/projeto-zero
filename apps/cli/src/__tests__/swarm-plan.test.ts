@@ -97,7 +97,8 @@ describe("buildSwarmPlan", () => {
     const argv = plan.agents[0].argv;
     const idx = argv.indexOf("--allowed-tools");
     expect(idx).toBeGreaterThanOrEqual(0);
-    expect(argv[idx + 1]).toBe("read_file,bash(git:diff*)");
+    const end = argv.indexOf("--disallowed-tools");
+    expect(argv.slice(idx + 1, end)).toEqual(["read_file", "bash(git:diff*)"]);
     const modeIdx = argv.indexOf("--permission-mode");
     expect(argv[modeIdx + 1]).toBe("plan");
   });

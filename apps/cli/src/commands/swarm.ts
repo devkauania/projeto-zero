@@ -26,6 +26,7 @@ import {
   type WorktreeHandle,
 } from "../lib/swarm/worktree-manager.js";
 import { spawnClaudeAgent } from "../lib/swarm/agent-spawner.js";
+import { superviseAgent } from "../lib/swarm/agent-outcome.js";
 
 export interface SwarmAgentPlan {
   index: number;
@@ -104,7 +105,6 @@ export function buildSwarmPlan(args: {
   disallowedTools?: string[];
   maxTurns?: number;
   maxBudgetUsd?: number;
-  temperature?: number;
   repoRoot?: string;
 }): SwarmPlan {
   const {
@@ -118,7 +118,6 @@ export function buildSwarmPlan(args: {
     disallowedTools,
     maxTurns,
     maxBudgetUsd,
-    temperature,
     repoRoot,
   } = args;
 
@@ -149,7 +148,6 @@ export function buildSwarmPlan(args: {
       disallowedTools,
       maxTurns,
       maxBudgetUsd,
-      temperature,
     });
 
     agents.push({
@@ -199,7 +197,6 @@ export const swarmCommand = new Command("swarm")
   )
   .option("--allowed-tools <list>", "Comma-separated tool allowlist")
   .option("--disallowed-tools <list>", "Comma-separated tool denylist")
-  .option("--temperature <n>", "Sampling temperature (0..2)")
   .option("--session-prefix <str>", "Swarm id prefix (default: swarm)")
   .option(
     "--i-understand",
@@ -223,9 +220,6 @@ export const swarmCommand = new Command("swarm")
       const maxBudgetUsd = opts.maxBudgetUsd
         ? Number(opts.maxBudgetUsd)
         : undefined;
-      const temperature = opts.temperature
-        ? Number(opts.temperature)
-        : undefined;
 
       const promptsDir = opts.prompts
         ? path.resolve(opts.prompts)
@@ -243,7 +237,6 @@ export const swarmCommand = new Command("swarm")
         disallowedTools,
         maxTurns,
         maxBudgetUsd,
-        temperature,
       });
 
       const rendered = renderPlan(plan);
@@ -275,60 +268,49 @@ export const swarmCommand = new Command("swarm")
         handles.push(h);
       }
 
-      const processes = plan.agents.map((a) => {
-        const s = spawnClaudeAgent({
-          argv: a.argv,
-          cwd: a.worktreePath,
-          promptFile: a.prompt.path,
-        });
-        const tag = theme.brand(`[agent-${a.index}]`);
-        s.proc.stdout?.on("data", (buf: Buffer) => {
-          for (const line of buf.toString("utf8").split(/\r?\n/)) {
-            if (line.length > 0) console.log(`${tag} ${line}`);
+      // Spawn every agent, then supervise each until its stdio closes. An
+      // agent only succeeds when it exits 0, its stdout is valid stream-json
+      // and it ends with a successful `result` event (see agent-outcome.ts).
+      const outcomes = await Promise.all(
+        plan.agents.map((a) => {
+          const tag = theme.brand(`[agent-${a.index}]`);
+          let proc;
+          try {
+            proc = spawnClaudeAgent({
+              argv: a.argv,
+              cwd: a.worktreePath,
+              promptFile: a.prompt.path,
+            }).proc;
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return Promise.resolve({ ok: false, reason: `spawn refused: ${msg}` });
           }
-        });
-        s.proc.stderr?.on("data", (buf: Buffer) => {
-          for (const line of buf.toString("utf8").split(/\r?\n/)) {
-            if (line.length > 0) console.error(`${tag} ${theme.warning(line)}`);
-          }
-        });
-        return s;
+          proc.stderr?.on("data", (buf: Buffer) => {
+            for (const line of buf.toString("utf8").split(/\r?\n/)) {
+              if (line.length > 0) console.error(`${tag} ${theme.warning(line)}`);
+            }
+          });
+          return superviseAgent(proc, (line) => console.log(`${tag} ${line}`));
+        })
+      );
+
+      const failures: string[] = [];
+      outcomes.forEach((o, i) => {
+        if (o.ok) return;
+        const tag = theme.brand(`[agent-${plan.agents[i].index}]`);
+        const hint =
+          o.reason && /ENOENT/.test(o.reason)
+            ? " — is Claude Code installed and on PATH? (https://docs.claude.com/claude-code)"
+            : "";
+        console.error(`${tag} ${theme.warning(`failed: ${o.reason}${hint}`)}`);
+        failures.push(`agent-${plan.agents[i].index}: ${o.reason}`);
       });
 
-      // Resolve on whichever of "exit" or "error" fires first so a missing
-      // `claude` binary (ENOENT) exits friendly instead of hanging Promise.all.
-      const failures: string[] = [];
-      await Promise.all(
-        plan.agents.map(
-          (a, i) =>
-            new Promise<void>((resolve) => {
-              const s = processes[i];
-              const tag = theme.brand(`[agent-${a.index}]`);
-              let settled = false;
-              const done = () => {
-                if (settled) return;
-                settled = true;
-                resolve();
-              };
-              s.proc.on("exit", done);
-              s.proc.on("error", (err: Error) => {
-                const hint =
-                  /ENOENT/.test(err.message) && /claude/i.test(err.message)
-                    ? ` — is Claude Code installed and on PATH? (https://docs.claude.com/claude-code)`
-                    : "";
-                console.error(
-                  `${tag} ${theme.warning(`spawn failed: ${err.message}${hint}`)}`
-                );
-                failures.push(`agent-${a.index}: ${err.message}`);
-                done();
-              });
-            })
-        )
-      );
       if (failures.length > 0) {
         console.error(
           theme.warning(
-            `\nSwarm ${plan.id} finished with ${failures.length} spawn failure(s).`
+            `\nSwarm ${plan.id} FAILED: ${failures.length} of ${plan.agents.length} agent(s) did not finish successfully. ` +
+              `Worktrees and swarm/${plan.id}/* branches are kept under .claude/worktrees/${plan.id}/ for inspection.`
           )
         );
         process.exit(1);
@@ -336,7 +318,7 @@ export const swarmCommand = new Command("swarm")
 
       console.log(
         theme.success(
-          `\nSwarm ${plan.id} complete. Worktrees retained under .claude/worktrees/${plan.id}/ for inspection.`
+          `\nSwarm ${plan.id} complete: ${plan.agents.length} agent(s) succeeded. Worktrees retained under .claude/worktrees/${plan.id}/ for inspection.`
         )
       );
     } catch (err) {

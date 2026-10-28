@@ -38,23 +38,53 @@ from `apps/cli/src/lib/swarm/safety-envelope.ts` — a pure, tested function
 that is the single source of truth. Changing a default requires editing
 that file and updating the drift-guard tests.
 
+Each agent runs `claude -p --verbose --output-format stream-json ...` in
+non-interactive print mode. The prompt body is piped to the child's stdin and
+the agent's worktree is the child's working directory (spawn `cwd`); neither
+appears on argv. Every flag the envelope emits is checked by a contract test
+against a recorded list of real Claude Code CLI flags
+(`CLAUDE_CLI_FLAGS`, taken from the official CLI reference and
+`claude --help`).
+
 | Flag | Default | Why |
 |---|---|---|
+| `-p` / `--verbose` | always | Print (non-interactive) mode. `--output-format`, `--max-turns` and `--max-budget-usd` only work with `-p`, and `stream-json` under `-p` requires `--verbose`. |
 | `--permission-mode` | `acceptEdits` (work) / `plan` (verify) | `bypassPermissions` requires both `--permission-mode bypassPermissions` AND `--i-understand` at the top-level CLI. Verify mode is always read-only. |
 | `--allowed-tools` | `read_file,write_file,edit_file,bash(git:*),bash(npm:*)` | Tight allowlist. Verify mode collapses to `read_file,bash(git:diff*)`. |
 | `--disallowed-tools` | `bash(rm:*),bash(curl:*),bash(wget:*),bash(ssh:*)` | Destructive and network-exfiltration shell commands. |
 | `--max-turns` | `20` | Per-agent turn cap. |
 | `--max-budget-usd` | `5.00` | Per-agent USD cap. |
-| `--temperature` | `0.2` | Deterministic-leaning sampling for reproducible verification. |
-| `--output-format` | `stream-json` | Machine-parseable. The v1.1.0 live renderer streams it as-is with an `[agent-N]` prefix. The `--max-budget-usd` value is passed through to each child `claude` process; the launcher itself does not track spend. |
-| `--working-dir` | `.claude/worktrees/<swarm-id>/agent-<n>` | Each agent is confined to its own git worktree. |
+| `--output-format` | `stream-json` | Machine-parseable. The live renderer streams each line with an `[agent-N]` prefix and also parses it to decide success (see below). The `--max-budget-usd` value is passed through to each child `claude` process; the launcher itself does not track spend. |
+| working directory (spawn `cwd`) | `.claude/worktrees/<swarm-id>/agent-<n>` | Each agent starts in its own git worktree. This is a starting directory, not a sandbox: Claude Code can still be asked to touch paths outside it. |
 | child env | Allowlist of 11 variables (`PATH`, `HOME`, `CLAUDE_CODE_OAUTH_TOKEN`, …) | `NPM_TOKEN`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, and every other parent env var are stripped before spawn. |
+
+Claude Code has no `--temperature`, `--working-dir` or `--prompt-file`
+flag. Releases up to 1.1.3 emitted all three (and no `-p`), so every live
+agent died at argument parsing; they were removed, and `swarm --temperature`
+no longer exists.
 
 Prompt content is **never** placed on argv. It is read from the prompt
 file and streamed to the child's stdin. A static test
 (`apps/cli/src/__tests__/swarm-spawner.test.ts`) greps the spawner source
 for `argv.join`, `exec(`, `execSync(`, and `shell: true`, failing the
 build if any appear.
+
+---
+
+## Success and failure (live mode)
+
+An agent counts as successful only if **all** of these hold:
+
+1. the child exits with code 0 and was not killed by a signal;
+2. every non-empty stdout line parses as JSON (stream-json);
+3. a final `{"type":"result", ...}` event arrives; and
+4. that event has `subtype: "success"` and `is_error` not `true`.
+
+If any agent fails (including a spawn error such as `ENOENT`), the launcher
+prints the reason per agent, prints `Swarm <id> FAILED: ...` and exits with
+code 1. Only when every agent succeeds does it print `Swarm <id> complete`
+and exit 0. Worktrees and `swarm/<id>/agent-<n>` branches are kept in both
+cases.
 
 ---
 
@@ -168,6 +198,9 @@ antigravity swarm --count 1 --permission-mode bypassPermissions --i-understand -
 | `swarm: invalid sessionId` | You overrode a session-prefix with non-`[a-zA-Z0-9_-]` characters. |
 | `git worktree add failed` | A previous run's worktree wasn't cleaned up. `git worktree remove --force <path>` or `git worktree prune`. |
 | Agent hangs without output | Confirm `claude --version` is on PATH and `CLAUDE_CODE_OAUTH_TOKEN` is set. Without the token the child exits silently. |
+| `failed: spawn failed: spawn claude ENOENT` on Windows | The launcher spawns `claude` without a shell (no argv interpolation). An npm-installed Claude Code on Windows is only a `claude.cmd` shim, which cannot be spawned that way. Install the native Claude Code build so a real `claude.exe` is on PATH. |
+| `failed: exited with code 1` | The child `claude` rejected its arguments or errored. Its stderr is shown with the `[agent-N]` prefix. |
+| `failed: ... not stream-json` | The child printed something that is not stream-json on stdout, so the run cannot be trusted as a success. |
 
 Full audit trail of swarm security controls:
 [`audit/vulnerability-ledger.md`](../audit/vulnerability-ledger.md).

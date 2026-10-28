@@ -1,0 +1,55 @@
+$ projeto-zero --version
+1.1.3
+
+$ printf 'demo-app\ncoder auditor\ny\n' | projeto-zero init
+  ____            _      _          _____              
+ |  _ \ _ __ ___ (_) ___| |_ ___   |__  /___ _ __ ___  
+ | |_) | '__/ _ \| |/ _ \ __/ _ \    / // _ \ '__/ _ \ 
+ |  __/| | | (_) | |  __/ || (_) |  / /|  __/ | | (_) |
+ |_|   |_|  \___// |\___|\__\___/  /____\___|_|  \___/ 
+               |__/                                    
+  Interactive CLI Setup Wizard v1.1.3
+
+┌   Projeto Zero Interactive Setup 
+│
+◇  Configuration saved successfully!
+│
+└  Setup complete. You can now run "generate" or "info".
+
+$ projeto-zero generate -d .
+┌   Code Generation 
+│
+◇  Scaffold completed!
+│
+◆  Created 6 artifacts in .
+│
+└  Generated 6 artifacts in the target directory.
+
+$ git status --short --untracked-files=all
+?? .agents/auditor.md
+?? .agents/coder.md
+?? .agents/prompts/.gitkeep
+?? CLAUDE.md
+?? skills/auditor/SKILL.md
+?? skills/coder/SKILL.md
+
+# add one prompt for the swarm: .agents/prompts/add-tests.md
+
+$ projeto-zero swarm --count 2 --dry-run
+swarm-id: swarm-20261028171221
+mode:     work
+count:    2
+
+agent[0]
+  session-id:   47f0e6ec-f34c-4455-b86c-099f45d6df57
+  worktree:     <tmp>\demo-app\.claude\worktrees\swarm-20261028171221\agent-0
+  prompt-id:    add-tests
+  prompt-path:  <tmp>\demo-app\.agents\prompts\add-tests.md
+  argv:         ["-p","--verbose","--output-format","stream-json","--permission-mode","acceptEdits","--allowed-tools","Read","Write","Edit","Bash(git:*)","Bash(npm:*)","--disallowed-tools","Bash(rm:*)","Bash(curl:*)","Bash(wget:*)","Bash(ssh:*)","WebFetch","WebSearch","--max-turns","20","--max-budget-usd","5.00","--session-id","47f0e6ec-f34c-4455-b86c-099f45d6df57"]
+
+agent[1]
+  session-id:   666849d0-5496-4aa7-87ce-7341e5a5bb8b
+  worktree:     <tmp>\demo-app\.claude\worktrees\swarm-20261028171221\agent-1
+  prompt-id:    add-tests
+  prompt-path:  <tmp>\demo-app\.agents\prompts\add-tests.md
+  argv:         ["-p","--verbose","--output-format","stream-json","--permission-mode","acceptEdits","--allowed-tools","Read","Write","Edit","Bash(git:*)","Bash(npm:*)","--disallowed-tools","Bash(rm:*)","Bash(curl:*)","Bash(wget:*)","Bash(ssh:*)","WebFetch","WebSearch","--max-turns","20","--max-budget-usd","5.00","--session-id","666849d0-5496-4aa7-87ce-7341e5a5bb8b"]

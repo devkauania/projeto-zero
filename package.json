@@ -13,7 +13,8 @@
     "preflight": "node scripts/preflight.mjs",
     "verdict": "node scripts/verdict.mjs",
     "gate": "node scripts/session-gate.mjs",
-    "scan:placeholders": "node scripts/placeholder-scan.mjs"
+    "scan:placeholders": "node scripts/placeholder-scan.mjs",
+    "demo": "node scripts/record-demo.mjs"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

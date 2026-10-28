@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="914" height="1284" viewBox="0 0 914 1284" role="img" aria-label="projeto-zero: init, generate, swarm --dry-run">
+<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:14px;white-space:pre}</style>
+<rect width="914" height="1284" rx="10" fill="#0d1117"/>
+<rect x="0.5" y="0.5" width="913" height="1283" rx="10" fill="none" stroke="#30363d"/>
+<circle cx="22" cy="20" r="6" fill="#ff5f56"/><circle cx="42" cy="20" r="6" fill="#ffbd2e"/><circle cx="62" cy="20" r="6" fill="#27c93f"/>
+<text x="457" y="25" text-anchor="middle" fill="#8b949e" style="font-size:12px">projeto-zero: init, generate, swarm --dry-run</text>
+<rect x="45.2" y="284" width="268.8" height="20" fill="#39c5cf"/>
+<rect x="45.2" y="424" width="142.8" height="20" fill="#e6edf3"/>
+<g xml:space="preserve">
+<text y="58"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">$</tspan><tspan x="28.4" textLength="193.2" lengthAdjust="spacing" fill="#e6edf3"> projeto-zero --version</tspan></text>
+<text y="78"><tspan x="20.0" textLength="42.0" lengthAdjust="spacing" fill="#e6edf3">1.1.3</tspan></text>
+<text y="118"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">$</tspan><tspan x="28.4" textLength="487.2" lengthAdjust="spacing" fill="#e6edf3"> printf 'demo-app\ncoder auditor\ny\n' | projeto-zero init</tspan></text>
+<text y="138"><tspan x="20.0" textLength="462.0" lengthAdjust="spacing" fill="#39c5cf">  ____            _      _          _____              </tspan></text>
+<text y="158"><tspan x="20.0" textLength="462.0" lengthAdjust="spacing" fill="#39c5cf"> |  _ \ _ __ ___ (_) ___| |_ ___   |__  /___ _ __ ___  </tspan></text>
+<text y="178"><tspan x="20.0" textLength="462.0" lengthAdjust="spacing" fill="#39c5cf"> | |_) | '__/ _ \| |/ _ \ __/ _ \    / // _ \ '__/ _ \ </tspan></text>
+<text y="198"><tspan x="20.0" textLength="462.0" lengthAdjust="spacing" fill="#39c5cf"> |  __/| | | (_) | |  __/ || (_) |  / /|  __/ | | (_) |</tspan></text>
+<text y="218"><tspan x="20.0" textLength="462.0" lengthAdjust="spacing" fill="#39c5cf"> |_|   |_|  \___// |\___|\__\___/  /____\___|_|  \___/ </tspan></text>
+<text y="238"><tspan x="20.0" textLength="462.0" lengthAdjust="spacing" fill="#39c5cf">               |__/                                    </tspan></text>
+<text y="258"><tspan x="20.0" textLength="310.8" lengthAdjust="spacing" fill="#8b949e" opacity="0.9">  Interactive CLI Setup Wizard v1.1.3</tspan></text>
+<text y="298"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">┌</tspan><tspan x="45.2" textLength="268.8" lengthAdjust="spacing" fill="#484f58"> Projeto Zero Interactive Setup </tspan></text>
+<text y="318"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">│</tspan></text>
+<text y="338"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">◇</tspan><tspan x="28.4" textLength="294.0" lengthAdjust="spacing" fill="#e6edf3">  Configuration saved successfully!</tspan></text>
+<text y="358"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">│</tspan></text>
+<text y="378"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">└</tspan><tspan x="45.2" textLength="445.2" lengthAdjust="spacing" fill="#3fb950">Setup complete. You can now run &quot;generate&quot; or &quot;info&quot;.</tspan></text>
+<text y="418"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">$</tspan><tspan x="28.4" textLength="226.8" lengthAdjust="spacing" fill="#e6edf3"> projeto-zero generate -d .</tspan></text>
+<text y="438"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">┌</tspan><tspan x="45.2" textLength="142.8" lengthAdjust="spacing" fill="#0d1117"> Code Generation </tspan></text>
+<text y="458"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">│</tspan></text>
+<text y="478"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">◇</tspan><tspan x="28.4" textLength="176.4" lengthAdjust="spacing" fill="#e6edf3">  Scaffold completed!</tspan></text>
+<text y="498"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">│</tspan></text>
+<text y="518"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">◆</tspan><tspan x="45.2" textLength="159.6" lengthAdjust="spacing" fill="#3fb950">Created 6 artifacts</tspan><tspan x="213.2" textLength="33.6" lengthAdjust="spacing" fill="#8b949e" opacity="0.9">in .</tspan></text>
+<text y="538"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">│</tspan></text>
+<text y="558"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#6e7681">└</tspan><tspan x="45.2" textLength="386.4" lengthAdjust="spacing" fill="#3fb950">Generated 6 artifacts in the target directory.</tspan></text>
+<text y="598"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">$</tspan><tspan x="28.4" textLength="344.4" lengthAdjust="spacing" fill="#e6edf3"> git status --short --untracked-files=all</tspan></text>
+<text y="618"><tspan x="20.0" textLength="176.4" lengthAdjust="spacing" fill="#e6edf3">?? .agents/auditor.md</tspan></text>
+<text y="638"><tspan x="20.0" textLength="159.6" lengthAdjust="spacing" fill="#e6edf3">?? .agents/coder.md</tspan></text>
+<text y="658"><tspan x="20.0" textLength="226.8" lengthAdjust="spacing" fill="#e6edf3">?? .agents/prompts/.gitkeep</tspan></text>
+<text y="678"><tspan x="20.0" textLength="100.8" lengthAdjust="spacing" fill="#e6edf3">?? CLAUDE.md</tspan></text>
+<text y="698"><tspan x="20.0" textLength="218.4" lengthAdjust="spacing" fill="#e6edf3">?? skills/auditor/SKILL.md</tspan></text>
+<text y="718"><tspan x="20.0" textLength="201.6" lengthAdjust="spacing" fill="#e6edf3">?? skills/coder/SKILL.md</tspan></text>
+<text y="758"><tspan x="20.0" textLength="504.0" lengthAdjust="spacing" fill="#8b949e" opacity="0.9"># add one prompt for the swarm: .agents/prompts/add-tests.md</tspan></text>
+<text y="798"><tspan x="20.0" textLength="8.4" lengthAdjust="spacing" fill="#3fb950">$</tspan><tspan x="28.4" textLength="327.6" lengthAdjust="spacing" fill="#e6edf3"> projeto-zero swarm --count 2 --dry-run</tspan></text>
+<text y="818"><tspan x="20.0" textLength="252.0" lengthAdjust="spacing" fill="#e6edf3">swarm-id: swarm-20261028171221</tspan></text>
+<text y="838"><tspan x="20.0" textLength="117.6" lengthAdjust="spacing" fill="#e6edf3">mode:     work</tspan></text>
+<text y="858"><tspan x="20.0" textLength="92.4" lengthAdjust="spacing" fill="#e6edf3">count:    2</tspan></text>
+<text y="898"><tspan x="20.0" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">agent[0]</tspan></text>
+<text y="918"><tspan x="20.0" textLength="436.8" lengthAdjust="spacing" fill="#e6edf3">  session-id:   47f0e6ec-f34c-4455-b86c-099f45d6df57</tspan></text>
+<text y="938"><tspan x="20.0" textLength="646.8" lengthAdjust="spacing" fill="#e6edf3">  worktree:     &lt;tmp&gt;\demo-app\.claude\worktrees\swarm-20261028171221\agent-0</tspan></text>
+<text y="958"><tspan x="20.0" textLength="210.0" lengthAdjust="spacing" fill="#e6edf3">  prompt-id:    add-tests</tspan></text>
+<text y="978"><tspan x="20.0" textLength="495.6" lengthAdjust="spacing" fill="#e6edf3">  prompt-path:  &lt;tmp&gt;\demo-app\.agents\prompts\add-tests.md</tspan></text>
+<text y="998"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">  argv:         [&quot;-p&quot;,&quot;--verbose&quot;,&quot;--output-format&quot;,&quot;stream-json&quot;,&quot;--permission-mode&quot;,&quot;acceptEdits&quot;,&quot;--a</tspan></text>
+<text y="1018"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">llowed-tools&quot;,&quot;Read&quot;,&quot;Write&quot;,&quot;Edit&quot;,&quot;Bash(git:*)&quot;,&quot;Bash(npm:*)&quot;,&quot;--disallowed-tools&quot;,&quot;Bash(rm:*)&quot;,&quot;Bash(</tspan></text>
+<text y="1038"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">curl:*)&quot;,&quot;Bash(wget:*)&quot;,&quot;Bash(ssh:*)&quot;,&quot;WebFetch&quot;,&quot;WebSearch&quot;,&quot;--max-turns&quot;,&quot;20&quot;,&quot;--max-budget-usd&quot;,&quot;5.00</tspan></text>
+<text y="1058"><tspan x="20.0" textLength="470.4" lengthAdjust="spacing" fill="#e6edf3">&quot;,&quot;--session-id&quot;,&quot;47f0e6ec-f34c-4455-b86c-099f45d6df57&quot;]</tspan></text>
+<text y="1098"><tspan x="20.0" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">agent[1]</tspan></text>
+<text y="1118"><tspan x="20.0" textLength="436.8" lengthAdjust="spacing" fill="#e6edf3">  session-id:   666849d0-5496-4aa7-87ce-7341e5a5bb8b</tspan></text>
+<text y="1138"><tspan x="20.0" textLength="646.8" lengthAdjust="spacing" fill="#e6edf3">  worktree:     &lt;tmp&gt;\demo-app\.claude\worktrees\swarm-20261028171221\agent-1</tspan></text>
+<text y="1158"><tspan x="20.0" textLength="210.0" lengthAdjust="spacing" fill="#e6edf3">  prompt-id:    add-tests</tspan></text>
+<text y="1178"><tspan x="20.0" textLength="495.6" lengthAdjust="spacing" fill="#e6edf3">  prompt-path:  &lt;tmp&gt;\demo-app\.agents\prompts\add-tests.md</tspan></text>
+<text y="1198"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">  argv:         [&quot;-p&quot;,&quot;--verbose&quot;,&quot;--output-format&quot;,&quot;stream-json&quot;,&quot;--permission-mode&quot;,&quot;acceptEdits&quot;,&quot;--a</tspan></text>
+<text y="1218"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">llowed-tools&quot;,&quot;Read&quot;,&quot;Write&quot;,&quot;Edit&quot;,&quot;Bash(git:*)&quot;,&quot;Bash(npm:*)&quot;,&quot;--disallowed-tools&quot;,&quot;Bash(rm:*)&quot;,&quot;Bash(</tspan></text>
+<text y="1238"><tspan x="20.0" textLength="873.6" lengthAdjust="spacing" fill="#e6edf3">curl:*)&quot;,&quot;Bash(wget:*)&quot;,&quot;Bash(ssh:*)&quot;,&quot;WebFetch&quot;,&quot;WebSearch&quot;,&quot;--max-turns&quot;,&quot;20&quot;,&quot;--max-budget-usd&quot;,&quot;5.00</tspan></text>
+<text y="1258"><tspan x="20.0" textLength="470.4" lengthAdjust="spacing" fill="#e6edf3">&quot;,&quot;--session-id&quot;,&quot;666849d0-5496-4aa7-87ce-7341e5a5bb8b&quot;]</tspan></text>
+</g>
+</svg>

@@ -26,7 +26,7 @@ Or install globally once and re-use the same binary across projects:
 npm install -g @projeto-zero/cli
 ```
 
-> After a global install, the CLI is also available as `antigravity <command>` (legacy binary name retained for back-compat). All examples below use `npx` so they work without a global install.
+> After a global install, the CLI is available as `projeto-zero <command>` (and as `antigravity <command>`, the original binary name, kept for back-compat). All examples below use `npx` so they work without a global install.
 
 ## Usage
 
@@ -48,7 +48,7 @@ Initialize the wizard with interactive prompts. It will ask for:
 - Which MCP connectors to enable (if the `mcp` subagent is selected).
 - Whether to include Claude Code subagent + skill template files.
 
-This command writes your choices to disk (persisted statelessly via `conf` package), but **does not** generate any files.
+This command writes your choices to disk (persisted to a local config file via the `conf` package), but **does not** generate any files.
 
 ```bash
 npx -y @projeto-zero/cli init
@@ -81,7 +81,7 @@ npx -y @projeto-zero/cli reset
 ```
 
 ### `swarm`
-Launches a parallel Claude Code agent swarm against the prompts in `.agents/prompts/*.md`. Dry-run is the default — agents only spawn when you pass `--live`. See [`docs/SWARM.md`](../../docs/SWARM.md) for safety defaults, grid layouts, and the `--i-understand` gate.
+Launches a parallel Claude Code agent swarm against the prompts in `.agents/prompts/*.md`. Dry-run is the default — agents only spawn when you pass `--live`. See [`docs/SWARM.md`](https://github.com/devkauania/projeto-zero/blob/main/docs/SWARM.md) for safety defaults, grid layouts, and the `--i-understand` gate.
 
 > Note: `generate` creates `.agents/prompts/` as an empty folder (with a `.gitkeep`). You populate it with your own `*.md` prompt files before running `swarm`.
 

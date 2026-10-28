@@ -6,6 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
+    "projeto-zero": "dist/index.js",
     "antigravity": "dist/index.js"
   },
   "files": [
@@ -21,7 +22,6 @@
     "mcp",
     "subagent",
     "agents",
-    "antigravity",
     "wizard",
     "clack"
   ],

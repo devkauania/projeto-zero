@@ -76,3 +76,13 @@ node scripts/verdict.mjs     # PRODUCTION-READY check
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
+
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| `apps/cli/` | The published CLI (`@projeto-zero/cli`) and its tests. |
+| `scripts/` | Release gates run in CI (`preflight`, `verdict`, leftover-text and dependency checks). |
+| `docs/` | Architecture, swarm safety defaults, migration notes. |
+| `audit/` | Security process: vulnerability ledger, patches, and dated recon reports. |
+| `.agents/` | Agent definitions and prompts used by the CLI, **plus the build history** of this project: session handoffs and validations from building it with AI coding agents. Kept on purpose as an audit trail of how the tool was made and verified. |

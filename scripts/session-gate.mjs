@@ -48,10 +48,9 @@ function findHandoff(sessionN) {
 }
 
 function checkPreflight() {
-  const res = spawnSync("node", [join(REPO_ROOT, "scripts", "preflight.mjs")], {
+  const res = spawnSync(process.execPath, [join(REPO_ROOT, "scripts", "preflight.mjs")], {
     cwd: REPO_ROOT,
     encoding: "utf8",
-    shell: true,
   });
   return { ok: res.status === 0, out: (res.stdout || "") + (res.stderr || "") };
 }
@@ -102,7 +101,7 @@ function checkHandoff(sessionN) {
 
 function checkGitClean(sessionN) {
   const res = spawnSync("git", ["status", "--porcelain"], {
-    cwd: REPO_ROOT, encoding: "utf8", shell: true,
+    cwd: REPO_ROOT, encoding: "utf8",
   });
   if (res.status !== 0) {
     log("SKIP", "git-clean", "git not available or not a repo");
@@ -181,7 +180,7 @@ function checkVerificationArtifact() {
       const blame = spawnSync(
         "git",
         ["blame", "-L", `${lineNo},${lineNo}`, "--porcelain", "apps/cli/VERIFICATION.md"],
-        { cwd: REPO_ROOT, encoding: "utf8", shell: true }
+        { cwd: REPO_ROOT, encoding: "utf8" }
       );
       if (blame.status !== 0) {
         issues.push(`row ${rowNum} (line ${lineNo}): git blame failed — cannot verify authorship`);
@@ -196,7 +195,7 @@ function checkVerificationArtifact() {
         continue;
       }
       const msg = spawnSync("git", ["log", "-1", "--format=%B", sha], {
-        cwd: REPO_ROOT, encoding: "utf8", shell: true,
+        cwd: REPO_ROOT, encoding: "utf8",
       });
       if (msg.status !== 0) continue;
       if (/Co-Authored-By:\s*Claude/i.test(msg.stdout)) {

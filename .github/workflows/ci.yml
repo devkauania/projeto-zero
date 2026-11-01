@@ -35,3 +35,15 @@ jobs:
 
       - name: Verdict
         run: node scripts/verdict.mjs
+
+      # Runner paths have no spaces, so this is the only place the whole gate
+      # sees the kind of path a Windows user profile often has.
+      - name: Preflight from a path with a space and an accent
+        shell: bash
+        run: |
+          spaced="$RUNNER_TEMP/spaced path ação"
+          mkdir -p "$spaced"
+          git archive HEAD | tar -x -C "$spaced"
+          cd "$spaced"
+          npm ci
+          node scripts/preflight.mjs

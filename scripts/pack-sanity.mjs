@@ -33,7 +33,9 @@ function main() {
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   const declaredFiles = Array.isArray(pkg.files) ? pkg.files : [];
 
-  const res = spawnSync("npm", ["pack", "--dry-run", "--json"], {
+  // A fixed string through the shell, for npm's .cmd shim on Windows. The path
+  // reaches npm as cwd, so a space in it cannot split anything.
+  const res = spawnSync("npm pack --dry-run --json", {
     cwd: CLI_DIR,
     encoding: "utf8",
     shell: true,

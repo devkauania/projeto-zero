@@ -11,10 +11,9 @@ const REPO_ROOT = join(fileURLToPath(import.meta.url), "..", "..");
 const PREFLIGHT = join(REPO_ROOT, "scripts", "preflight.mjs");
 
 function main() {
-  const res = spawnSync("node", [PREFLIGHT], {
+  const res = spawnSync(process.execPath, [PREFLIGHT], {
     cwd: REPO_ROOT,
     encoding: "utf8",
-    shell: true,
   });
   const out = (res.stdout || "") + "\n" + (res.stderr || "");
   process.stdout.write(out);

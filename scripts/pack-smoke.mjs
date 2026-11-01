@@ -15,7 +15,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -56,14 +55,15 @@ function main() {
   mkdirSync(prefix);
 
   try {
-    const packed = run("npm", ["pack", "--silent"], { cwd: CLI_DIR });
+    // Straight into the temp folder. Moving it there afterwards fails with EXDEV
+    // when the repo and temp are on different drives, as on a Windows CI runner.
+    const packed = run("npm", ["pack", "--silent", "--pack-destination", base], { cwd: CLI_DIR });
     const name = packed.out.trim().split(/\r?\n/).pop();
     if (packed.code !== 0 || !name?.endsWith(".tgz")) {
       problems.push(`npm pack failed: ${packed.out}`);
       return;
     }
     const tarball = join(base, name);
-    renameSync(join(CLI_DIR, name), tarball);
 
     const installed = run(
       "npm",

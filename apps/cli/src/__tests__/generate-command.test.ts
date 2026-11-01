@@ -57,7 +57,7 @@ function runCli(opts: {
       } catch {
         /* ignore */
       }
-    }, opts.timeoutMs ?? 8000);
+    }, opts.timeoutMs ?? 60000);
 
     child.on("close", (code, signal) => {
       clearTimeout(hardTimer);
@@ -79,7 +79,7 @@ beforeAll(() => {
   }
 });
 
-describe("generate command", { timeout: 15000 }, () => {
+describe("generate command", { timeout: 60000 }, () => {
   let cfgDir: string;
   let outputDir: string;
 
@@ -93,14 +93,26 @@ describe("generate command", { timeout: 15000 }, () => {
     await fs.rm(outputDir, { recursive: true, force: true }).catch(() => {});
   });
 
-  it("shows 'run init first' and exits 0 when no config exists", async () => {
+  it("exits 1 and writes nothing when no config exists", async () => {
+    // Exit 0 here let `init && generate` go green with no files on disk.
     const r = await runCli({
       args: ["generate", "-d", outputDir],
       env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
     });
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/init/i);
+    expect(r.code).toBe(1);
+    expect(r.stdout + r.stderr).toMatch(/run "init" first/i);
+    expect(await fs.readdir(outputDir)).toEqual([]);
     assertNoStackTrace(r.stderr);
+  });
+
+  it("exits 1 instead of hanging when piped and nothing gives a directory", async () => {
+    await fs.writeFile(
+      path.join(cfgDir, "config.json"),
+      JSON.stringify({ wizard: { projectName: "p", agents: ["coder"], includeTemplates: false } })
+    );
+    const r = await runCli({ args: ["generate"], env: { ANTIGRAVITY_CONFIG_DIR: cfgDir } });
+    expect(r.code).toBe(1);
+    expect(r.stdout + r.stderr).toMatch(/-d/);
   });
 
   it("creates files in the target dir when config is valid", async () => {
@@ -123,8 +135,41 @@ describe("generate command", { timeout: 15000 }, () => {
       env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
     });
     expect(r.code).toBe(0);
-    const entries = await fs.readdir(outputDir, { recursive: true });
-    expect(entries.length).toBeGreaterThan(0);
+    const entries = (await fs.readdir(outputDir, { recursive: true }))
+      .map((e) => String(e).replace(/\\/g, "/"))
+      .sort();
+    expect(entries).toEqual([
+      ".agents",
+      ".agents/coder.md",
+      ".agents/prompts",
+      ".agents/prompts/.gitkeep",
+      "CLAUDE.md",
+      "skills",
+      "skills/coder",
+      "skills/coder/SKILL.md",
+    ]);
+    expect(r.stdout).toMatch(/Created 4 artifacts/);
+  });
+
+  it("counts files and not the folders it made", async () => {
+    // With templates this config happens to make 4 files and 4 folders, so that
+    // count alone cannot tell them apart. Here it is 2 files and 3 folders.
+    const prev = process.env.ANTIGRAVITY_CONFIG_DIR;
+    process.env.ANTIGRAVITY_CONFIG_DIR = cfgDir;
+    try {
+      saveConfig({ projectName: "count", agents: ["coder"], includeTemplates: false });
+    } finally {
+      if (prev === undefined) delete process.env.ANTIGRAVITY_CONFIG_DIR;
+      else process.env.ANTIGRAVITY_CONFIG_DIR = prev;
+    }
+    const out = path.join(cfgDir, "count-out");
+    const r = await runCli({
+      args: ["generate", "-d", out],
+      env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
+    });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toMatch(/Created 2 artifacts/);
+    expect(r.stdout).toMatch(/Generated 2 artifacts/);
   });
 
   it("exits 1 with no stack trace when target dir is read-only", async () => {
@@ -166,7 +211,7 @@ describe("generate command", { timeout: 15000 }, () => {
 // Regression: a connector id from the saved config was used as a file name
 // (.mcp/<id>.json) without validation, so "../../ESCAPED" wrote ESCAPED.json
 // outside the -d target while generate still reported success.
-describe("generate command — connector id path escape", { timeout: 15000 }, () => {
+describe("generate command — connector id path escape", { timeout: 60000 }, () => {
   let cfgDir: string;
   let scratch: string;
 

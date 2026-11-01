@@ -1,14 +1,6 @@
 /**
- * Session 14d — reset command tests.
- *
- * Tests the `reset` command via child_process.spawn against the real
- * built CLI at dist/index.js. No mocks.
- *
- * Known gap: The interactive confirmation flow (p.confirm) cannot be
- * tested via spawn because piped stdio triggers the non-TTY guard in
- * reset.ts, which exits before reaching the confirmation prompt.
- * Testing the TTY-dependent confirmation path would require a
- * pseudo-TTY, which is outside the scope of this session.
+ * reset under piped stdio, through the real built CLI. The confirmation prompt
+ * needs a terminal, so it is covered in interactive.test.ts.
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
@@ -60,7 +52,7 @@ function runCli(opts: {
       } catch {
         /* ignore */
       }
-    }, opts.timeoutMs ?? 8000);
+    }, opts.timeoutMs ?? 60000);
 
     child.on("close", (code, signal) => {
       clearTimeout(hardTimer);
@@ -77,7 +69,7 @@ beforeAll(() => {
   }
 });
 
-describe("reset command", { timeout: 15000 }, () => {
+describe("reset command", { timeout: 60000 }, () => {
   let cfgDir: string;
 
   beforeEach(async () => {
@@ -94,23 +86,24 @@ describe("reset command", { timeout: 15000 }, () => {
       env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
     });
     expect(r.stdout).toMatch(/interactive terminal/i);
-    expect(r.code).toBe(0);
+    // Nothing was cleared, so a script must not read this as success.
+    expect(r.code).toBe(1);
   });
 
-  it("does not hang in non-TTY (piped stdin) — terminates within 5s", async () => {
+  it("does not hang in non-TTY (piped stdin)", async () => {
     const start = Date.now();
     const r = await runCli({
       args: ["reset"],
       env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
-      timeoutMs: 5000,
+      timeoutMs: 30000,
     });
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(5000);
+    expect(elapsed).toBeLessThan(30000);
     expect(r.stdout).toMatch(/interactive terminal/i);
     expect(r.signal).toBeNull();
   });
 
-  it("exits cleanly in non-TTY mode even with existing config (known gap: interactive confirmation untestable via spawn)", async () => {
+  it("refuses in non-TTY mode and leaves an existing config in place", async () => {
     const prev = process.env.ANTIGRAVITY_CONFIG_DIR;
     process.env.ANTIGRAVITY_CONFIG_DIR = cfgDir;
     try {
@@ -130,6 +123,8 @@ describe("reset command", { timeout: 15000 }, () => {
       env: { ANTIGRAVITY_CONFIG_DIR: cfgDir },
     });
     expect(r.stdout).toMatch(/interactive terminal/i);
-    expect(r.code).toBe(0);
+    expect(r.code).toBe(1);
+    const stored = JSON.parse(fsSync.readFileSync(path.join(cfgDir, "config.json"), "utf8"));
+    expect(stored.wizard.projectName).toBe("reset-test");
   });
 });

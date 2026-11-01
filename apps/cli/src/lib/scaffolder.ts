@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import { assertValidConnectorId, type WizardConfig } from "./config.js";
-import { ensureDir, writeJsonFile } from "./fs-utils.js";
+import { validateWizardConfig, type WizardConfig } from "./config.js";
+import { ensureDir } from "./fs-utils.js";
 
 /**
  * Claude Code workspace scaffold — produces the on-disk shape documented
@@ -229,77 +229,125 @@ _Describe the agreed workflow - e.g., coder implements, auditor runs tests, desi
 `;
 }
 
-export async function scaffoldProject(
-  config: WizardConfig,
-  targetDir: string
-): Promise<string[]> {
-  const root = path.resolve(targetDir);
-  const created: string[] = [];
+export interface ScaffoldOptions {
+  /** Overwrite files that already exist. Never writes through a link, even so. */
+  force?: boolean;
+}
 
-  // Validate connector ids BEFORE writing anything. Ids become file names
-  // (.mcp/<id>.json); a crafted id such as "../../x" would otherwise write
-  // outside the target directory. Checked here (the sink) so every caller is
-  // covered, not only configs that went through loadConfig().
-  for (const id of Object.keys(config.mcpConnectors ?? {})) {
-    assertValidConnectorId(id);
-  }
+export interface ScaffoldResult {
+  /** Files written and directories made, relative to the target. */
+  created: string[];
+  /** Existing files left untouched, relative to the target. */
+  skipped: string[];
+}
 
-  // Core directories (Claude Code convention).
-  for (const dir of [".agents", ".agents/prompts", "skills"]) {
-    const full = path.join(root, dir);
-    if (await ensureDir(full)) created.push(dir + "/");
-  }
+interface PlannedFile {
+  rel: string;
+  contents: string;
+}
 
-  // .gitkeep in .agents/prompts — Stage 3 swarm launcher populates this dir.
-  const gitkeep = path.join(root, ".agents", "prompts", ".gitkeep");
-  await fs.writeFile(gitkeep, "", "utf-8");
-  created.push(".agents/prompts/.gitkeep");
+/** Everything `generate` would write for this config, before touching disk. */
+function planFiles(config: WizardConfig): PlannedFile[] {
+  const files: PlannedFile[] = [
+    { rel: ".agents/prompts/.gitkeep", contents: "" },
+    { rel: "CLAUDE.md", contents: renderClaudeMd(config.projectName, config.agents) },
+  ];
 
-  // CLAUDE.md — root project memory.
-  const claudeMdPath = path.join(root, "CLAUDE.md");
-  await fs.writeFile(claudeMdPath, renderClaudeMd(config.projectName, config.agents), "utf-8");
-  created.push("CLAUDE.md");
-
-  // Subagent + skill files for each selected agent (when includeTemplates=true).
   if (config.includeTemplates) {
     for (const agent of config.agents) {
       const tmpl = AGENT_TEMPLATES[agent];
-      if (!tmpl) continue;
-
-      const subPath = path.join(root, tmpl.subagent.path);
-      await fs.writeFile(subPath, tmpl.subagent.contents, "utf-8");
-      created.push(tmpl.subagent.path);
-
-      const skillDir = path.join(root, path.dirname(tmpl.skill.path));
-      await ensureDir(skillDir);
-      const skillPath = path.join(root, tmpl.skill.path);
-      await fs.writeFile(skillPath, tmpl.skill.contents, "utf-8");
-      created.push(tmpl.skill.path);
+      files.push({ rel: tmpl.subagent.path, contents: tmpl.subagent.contents });
+      files.push({ rel: tmpl.skill.path, contents: tmpl.skill.contents });
     }
   }
 
-  // .mcp/<connector>.json for each selected connector. The connector set is
-  // already filtered in init.ts (Stage 5 patch 01) to match the user's
-  // selection — an empty mcpConnectors map means zero writes here.
-  if (config.mcpConnectors && Object.keys(config.mcpConnectors).length > 0) {
-    const mcpDir = path.join(root, ".mcp");
-    if (await ensureDir(mcpDir)) created.push(".mcp/");
-    for (const [id, connector] of Object.entries(config.mcpConnectors)) {
-      const filePath = path.resolve(mcpDir, `${id}.json`);
-      // Defence in depth: the resolved file must sit directly inside .mcp/.
-      const rel = path.relative(mcpDir, filePath);
-      if (rel.startsWith("..") || path.isAbsolute(rel) || rel.includes(path.sep)) {
-        throw new Error(`refusing to write connector file outside .mcp/: ${JSON.stringify(id)}`);
-      }
-      await writeJsonFile(filePath, {
-        id: connector.id,
-        label: connector.label,
-        description: connector.description,
-        tools: connector.tools,
-      });
-      created.push(`.mcp/${id}.json`);
+  // The connector set is already filtered in init.ts to match the user's
+  // selection, so an empty mcpConnectors map means zero writes here.
+  for (const [id, connector] of Object.entries(config.mcpConnectors ?? {})) {
+    files.push({
+      rel: `.mcp/${id}.json`,
+      contents:
+        JSON.stringify(
+          {
+            id: connector.id,
+            label: connector.label,
+            description: connector.description,
+            tools: connector.tools,
+          },
+          null,
+          2
+        ) + "\n",
+    });
+  }
+  return files;
+}
+
+/**
+ * Refuse a link anywhere between the target and a path about to be written.
+ * A cloned repo can carry a link at `.agents`, and following it would write
+ * outside the target while reporting success. Directories that do not exist yet
+ * are fine. The target itself is the caller's own choice, so it may be a link.
+ */
+async function assertNoLinkOnPath(root: string, rel: string): Promise<void> {
+  let current = root;
+  const parts = rel.split("/");
+  for (let i = 0; i < parts.length; i++) {
+    current = path.join(current, parts[i]);
+    let st;
+    try {
+      st = await fs.lstat(current);
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException)?.code;
+      if (code === "ENOENT" || code === "ENOTDIR") return;
+      throw err;
+    }
+    const shown = parts.slice(0, i + 1).join("/");
+    if (st.isSymbolicLink()) {
+      throw new Error(`refusing to write through a link in the target: ${shown}`);
+    }
+    if (i < parts.length - 1 && !st.isDirectory()) {
+      throw new Error(`cannot write ${rel}: ${shown} exists and is not a directory`);
+    }
+  }
+}
+
+export async function scaffoldProject(
+  config: WizardConfig,
+  targetDir: string,
+  options: ScaffoldOptions = {}
+): Promise<ScaffoldResult> {
+  const root = path.resolve(targetDir);
+  const created: string[] = [];
+  const skipped: string[] = [];
+
+  // Check everything BEFORE writing anything. Connector ids become file names
+  // (.mcp/<id>.json), so a crafted id such as "../../x" would otherwise write
+  // outside the target directory. Checked here (the sink) so every caller is
+  // covered, not only configs that went through loadConfig().
+  validateWizardConfig(config);
+  const files = planFiles(config);
+  for (const { rel } of files) await assertNoLinkOnPath(root, rel);
+
+  // Core directories (Claude Code convention).
+  for (const dir of [".agents", ".agents/prompts", "skills"]) {
+    if (await ensureDir(path.join(root, dir))) created.push(dir + "/");
+  }
+
+  for (const { rel, contents } of files) {
+    const full = path.join(root, rel);
+    if (await ensureDir(path.dirname(full))) {
+      created.push(path.posix.dirname(rel) + "/");
+    }
+    try {
+      // "wx" fails if the file exists, without a gap between checking and
+      // writing. A hand-written CLAUDE.md is not ours to replace.
+      await fs.writeFile(full, contents, { encoding: "utf-8", flag: options.force ? "w" : "wx" });
+      created.push(rel);
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException)?.code !== "EEXIST") throw err;
+      skipped.push(rel);
     }
   }
 
-  return created;
+  return { created, skipped };
 }

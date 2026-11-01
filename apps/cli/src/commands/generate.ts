@@ -8,6 +8,7 @@ import { theme } from "../lib/theme.js";
 export const generateCommand = new Command("generate")
   .description("Generate project files from saved configuration")
   .option("-d, --dir <path>", "Target directory")
+  .option("--force", "Overwrite files that already exist", false)
   .action(async (options) => {
     p.intro(pc.inverse(" Code Generation "));
 
@@ -26,7 +27,7 @@ export const generateCommand = new Command("generate")
         "Pre-flight"
       );
       p.outro(theme.muted("Aborted."));
-      return;
+      process.exit(1);
     }
 
     // Resolve target dir: CLI flag > saved default > interactive prompt.
@@ -34,6 +35,10 @@ export const generateCommand = new Command("generate")
       options.dir ?? config.defaults?.targetDir;
 
     if (!targetDir) {
+      if (!process.stdin.isTTY) {
+        p.log.error(theme.error("No target directory: pass -d <dir> when not in a terminal."));
+        process.exit(1);
+      }
       const answer = await p.text({
         message: "Where should we generate the resources?",
         placeholder: "./output",
@@ -51,9 +56,9 @@ export const generateCommand = new Command("generate")
     const s = p.spinner();
     s.start("Scaffolding resources...");
 
-    let created: string[];
+    let result;
     try {
-      created = await scaffoldProject(config, targetDir);
+      result = await scaffoldProject(config, targetDir, { force: options.force === true });
       s.stop("Scaffold completed!");
     } catch (err) {
       s.stop("Scaffolding failed.");
@@ -61,12 +66,20 @@ export const generateCommand = new Command("generate")
       process.exit(1);
     }
 
-    const files = created.filter((i) => !i.endsWith("/"));
+    const files = result.created.filter((i) => !i.endsWith("/"));
     p.log.success(
       theme.success(`Created ${files.length} artifacts`) +
         " " +
         theme.muted(`in ${targetDir}`)
     );
+    if (result.skipped.length > 0) {
+      p.log.warning(
+        theme.warning(
+          `Skipped ${result.skipped.length} existing file(s), left as they were: ${result.skipped.join(", ")}. ` +
+            "Pass --force to overwrite them."
+        )
+      );
+    }
 
     p.outro(
       theme.success(`Generated ${files.length} artifacts in the target directory.`)

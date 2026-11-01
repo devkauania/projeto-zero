@@ -2,17 +2,22 @@ import { Command } from "commander";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import readline from "node:readline";
-import { saveConfig, type WizardConfig, type MCPConnector, type ScaffoldDefaults } from "../lib/config.js";
+import {
+  AGENT_IDS,
+  saveConfig,
+  type WizardConfig,
+  type MCPConnector,
+  type ScaffoldDefaults,
+} from "../lib/config.js";
 import { findSeedConfigPath, readJsonFile } from "../lib/fs-utils.js";
 import { showBanner } from "../lib/banner.js";
 import { theme } from "../lib/theme.js";
 
 /**
  * Install a global SIGINT handler that exits 0 cleanly with a friendly
- * cancellation message. Registered once per process to cover every prompt
- * variant (p.text, p.confirm, p.multiselect) — clack's own onCancel only
- * fires inside a TTY raw-mode session, so under piped stdio (CI / tests)
- * we need this OS-level safety net.
+ * cancellation message. Registered once per process. Clack handles Ctrl-C
+ * itself while a terminal prompt is open (raw mode), so this covers a real
+ * signal at any other moment, such as while waiting for piped answers.
  */
 function installSigintTrap(): void {
   if ((globalThis as { __pzSigintTrap?: boolean }).__pzSigintTrap) return;
@@ -27,68 +32,92 @@ function installSigintTrap(): void {
   });
 }
 
+export type NonInteractiveResult =
+  | { ok: true; answers: InitAnswers }
+  | { ok: false; message: string };
+
+const ANSWER_FORMAT = "name, subagents, templates (y/n), one per line";
+
 /**
- * Non-TTY fallback that drives the wizard from line-buffered stdin.
- *
- * @clack/prompts requires raw-mode TTY input and hangs forever under piped
- * stdio. We read available stdin lines instead. The strategy is "drain to
- * idle": collect lines until either stdin closes (`end`) or no new line
- * arrives within IDLE_MS. This matters because:
- *
- *   - On Windows there is no real SIGINT delivery to child processes
- *     (`child.kill('SIGINT')` calls TerminateProcess), so the child has no
- *     chance to run a Node-side signal handler. Instead, we just exit
- *     cleanly *before* the parent's SIGINT timer fires whenever we have
- *     no input or only partial input — that satisfies the contract that
- *     interrupting at any prompt produces a clean exit-0.
- *   - When all three answers are present (saveConfig recovery test) the
- *     drain finishes quickly and we proceed into the production path,
- *     where saveConfig errors are caught and routed to a graceful exit-1.
- *
- * Returns `null` to mean "incomplete / cancelled" — the caller handles
- * that as a graceful exit-0.
+ * Turn the three piped answers into InitAnswers. Blank lines take the documented
+ * defaults. Anything that cannot be understood is refused rather than guessed
+ * at, so a typo cannot quietly save something other than what was asked for.
  */
-const NON_TTY_IDLE_MS = 300;
-async function runNonInteractiveInit(): Promise<InitAnswers | null> {
+export function parseNonInteractiveAnswers(lines: string[]): NonInteractiveResult {
+  const projectName = lines[0].trim() || "my-project";
+
+  const requested = lines[1]
+    .split(/[\s,]+/)
+    .map((s) => s.toLowerCase())
+    .filter(Boolean);
+  const unknown = requested.filter((a) => !(AGENT_IDS as readonly string[]).includes(a));
+  if (unknown.length > 0) {
+    return {
+      ok: false,
+      message: `unknown subagent(s): ${unknown.join(", ")}. Valid: ${AGENT_IDS.join(", ")}.`,
+    };
+  }
+  const agents = requested.length > 0 ? [...new Set(requested)] : ["coder"];
+
+  const include = lines[2].trim().toLowerCase();
+  if (!["", "y", "yes", "n", "no"].includes(include)) {
+    return { ok: false, message: `templates answer must be y or n, got "${lines[2].trim()}".` };
+  }
+  const includeTemplates = include === "" || include.startsWith("y");
+
+  return { ok: true, answers: { projectName, agents, includeTemplates } };
+}
+
+/**
+ * Non-TTY fallback that drives the wizard from line-buffered stdin, because
+ * @clack/prompts requires raw-mode TTY input.
+ *
+ * Done as soon as three lines have arrived. Ending early is a failure the caller
+ * must report: before, a run that saved nothing exited 0, so `init && generate`
+ * went green with no files written. `idleMs` is only there so a stdin nobody
+ * will ever write to or close cannot hang a job forever; it is long because a
+ * slow producer is not a cancel (it used to be 300 ms, and that lost real input).
+ */
+const NON_TTY_IDLE_MS = 60_000;
+export function readNonInteractiveAnswers(
+  input: NodeJS.ReadableStream,
+  idleMs: number = NON_TTY_IDLE_MS
+): Promise<NonInteractiveResult> {
   const lines: string[] = [];
   return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin });
+    const rl = readline.createInterface({ input });
     let idle: NodeJS.Timeout | undefined;
     let done = false;
-    const finish = () => {
+    const finish = (timedOut: boolean) => {
       if (done) return;
       done = true;
       if (idle) clearTimeout(idle);
-      try {
-        rl.close();
-      } catch {
-        /* ignore */
+      rl.close();
+      if (lines.length >= 3) {
+        resolve(parseNonInteractiveAnswers(lines));
+      } else if (timedOut) {
+        resolve({
+          ok: false,
+          message: `timed out waiting for stdin after ${idleMs} ms: got ${lines.length} of 3 lines (${ANSWER_FORMAT}).`,
+        });
+      } else {
+        resolve({
+          ok: false,
+          message: `expected 3 lines on stdin (${ANSWER_FORMAT}), got ${lines.length}.`,
+        });
       }
-      if (lines.length < 3) {
-        resolve(null);
-        return;
-      }
-      const projectName = lines[0].trim() || "my-project";
-      const agentsLine = lines[1].trim();
-      const validIds = ["coder", "designer", "auditor", "mcp"];
-      const agents = agentsLine
-        .split(/\s+/)
-        .map((s) => s.trim().toLowerCase())
-        .filter((s) => validIds.includes(s));
-      if (agents.length === 0) agents.push("coder");
-      const includeLine = lines[2].trim().toLowerCase();
-      const includeTemplates = includeLine === "" || includeLine.startsWith("y");
-      resolve({ projectName, agents, includeTemplates });
     };
     const bumpIdle = () => {
       if (idle) clearTimeout(idle);
-      idle = setTimeout(finish, NON_TTY_IDLE_MS);
+      idle = setTimeout(() => finish(true), idleMs);
     };
     rl.on("line", (line) => {
+      if (done) return;
       lines.push(line);
-      bumpIdle();
+      if (lines.length >= 3) finish(false);
+      else bumpIdle();
     });
-    rl.on("close", finish);
+    rl.on("close", () => finish(false));
     bumpIdle();
   });
 }
@@ -168,17 +197,16 @@ export const initCommand = new Command("init")
     }));
 
     // Non-TTY (piped stdio) path: clack would hang waiting for raw-mode
-    // input, so we read answers from line-buffered stdin instead. This is
-    // also the only way the SIGINT-at-prompt and saveConfig-recovery
-    // acceptance tests can drive the wizard end-to-end.
+    // input, so we read answers from line-buffered stdin instead.
     if (!process.stdin.isTTY) {
-      const nonTtyAnswers = await runNonInteractiveInit();
-      if (!nonTtyAnswers) {
-        p.cancel("Setup cancelled.");
-        process.exit(0);
+      p.log.info(theme.muted(`Not a terminal: reading answers from stdin (${ANSWER_FORMAT}).`));
+      const nonTty = await readNonInteractiveAnswers(process.stdin);
+      if (!nonTty.ok) {
+        p.log.error(theme.error(`Nothing saved: ${nonTty.message}`));
+        process.exit(1);
       }
       const config = await buildWizardConfig(
-        nonTtyAnswers,
+        nonTty.answers,
         import.meta.url,
         [] // non-TTY never prompts for connectors; always empty regardless of agent selection
       );
@@ -189,7 +217,7 @@ export const initCommand = new Command("init")
         sNonTty.stop("Configuration saved successfully!");
       } catch (err) {
         sNonTty.stop("Failed to save configuration.");
-        p.log.error(theme.error(String(err)));
+        p.log.error(theme.error(err instanceof Error ? err.message : String(err)));
         process.exit(1);
       }
       p.outro(
@@ -211,6 +239,7 @@ export const initCommand = new Command("init")
         agents: () =>
           p.multiselect({
             message: "Select Claude Code subagents to scaffold:",
+            // Same ids as AGENT_IDS; the hints are what this list adds.
             options: [
               { value: "coder", label: "coder", hint: "Backend logic subagent" },
               { value: "designer", label: "designer", hint: "Terminal UI/UX subagent" },
@@ -266,7 +295,7 @@ export const initCommand = new Command("init")
       s.stop("Configuration saved successfully!");
     } catch (err) {
       s.stop("Failed to save configuration.");
-      p.log.error(theme.error(String(err)));
+      p.log.error(theme.error(err instanceof Error ? err.message : String(err)));
       process.exit(1);
     }
 

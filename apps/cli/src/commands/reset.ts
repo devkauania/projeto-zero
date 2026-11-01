@@ -9,6 +9,8 @@ export const resetCommand = new Command("reset")
   .action(async () => {
     if (!process.stdin.isTTY) {
       p.log.warning("Reset requires an interactive terminal.");
+      // Nothing was cleared, so a script must not read this as success.
+      process.exitCode = 1;
       return;
     }
 
@@ -18,7 +20,8 @@ export const resetCommand = new Command("reset")
     try {
       existing = loadConfig();
     } catch (err) {
-      // A malformed (possibly tampered) config must still be clearable.
+      // A malformed (possibly tampered) config must still be clearable. That
+      // includes a file that is not even JSON (ConfigStoreCorruptError).
       if (err instanceof ConfigValidationError) {
         p.log.warning(theme.warning(`Saved configuration is invalid: ${err.message}`));
         existing = true;

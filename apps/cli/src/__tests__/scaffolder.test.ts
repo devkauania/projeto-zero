@@ -107,10 +107,25 @@ describe("scaffoldProject — Claude Code workspace shape", () => {
 
     const raw = await fs.readFile(path.join(out, ".mcp/supabase.json"), "utf-8");
     const parsed = JSON.parse(raw);
-    expect(parsed.id).toBe("supabase");
-    expect(parsed.label).toBe("Supabase");
-    expect(parsed.tools).toEqual(["execute_sql"]);
+    expect(parsed).toEqual({
+      id: "supabase",
+      label: "Supabase",
+      description: "db",
+      tools: ["execute_sql"],
+    });
   });
+
+  it.each(["coder", "designer", "auditor", "mcp"])(
+    "the %s subagent and skill files are that agent's own",
+    async (agent) => {
+      const out = path.join(tmp, "own-" + agent);
+      await scaffoldProject(baseConfig({ agents: [agent] }), out);
+      for (const rel of [`.agents/${agent}.md`, `skills/${agent}/SKILL.md`]) {
+        const body = await fs.readFile(path.join(out, rel), "utf-8");
+        expect(body).toMatch(new RegExp(`^---\\nname: ${agent}\\n`));
+      }
+    }
+  );
 
   it("does not create .mcp/ when no connectors are selected", async () => {
     const out = path.join(tmp, "noMcpDir");
@@ -120,7 +135,8 @@ describe("scaffoldProject — Claude Code workspace shape", () => {
 
   it("returns a non-empty list of created artifacts", async () => {
     const out = path.join(tmp, "returnValue");
-    const created = await scaffoldProject(baseConfig(), out);
+    const { created, skipped } = await scaffoldProject(baseConfig(), out);
+    expect(skipped).toEqual([]);
     expect(created).toContain("CLAUDE.md");
     expect(created).toContain(".agents/coder.md");
     expect(created).toContain("skills/coder/SKILL.md");
@@ -132,6 +148,21 @@ describe("scaffoldProject — Claude Code workspace shape", () => {
 // accidentally changes the subagent frontmatter shape (name/description/tools
 // keys), this test fails and forces a conscious update. Addresses ledger row
 // 6 — prompt injection defense via hardcoded, snapshot-tested templates.
+describe("scaffoldProject — what each subagent may touch", () => {
+  it.each([
+    ["coder", "Read, Write, Edit, Bash, Grep, Glob"],
+    ["designer", "Read, Write, Edit"],
+    // The agent that reports on other agents' work does not get to change it.
+    ["auditor", "Read, Bash, Grep"],
+    ["mcp", "Read, Write, Edit"],
+  ])("%s gets exactly these tools", async (agent, tools) => {
+    const out = path.join(tmp, "tools-" + agent);
+    await scaffoldProject(baseConfig({ agents: [agent] }), out);
+    const body = await fs.readFile(path.join(out, ".agents", agent + ".md"), "utf-8");
+    expect(body.match(/^tools: (.*)$/m)?.[1]).toBe(tools);
+  });
+});
+
 describe("scaffoldProject — template drift guard", () => {
   it("subagent frontmatter exposes exactly name/description/tools keys", async () => {
     const out = path.join(tmp, "drift");
@@ -200,7 +231,7 @@ describe("scaffoldProject — connector id confinement", () => {
   });
 
   it("still writes .mcp/<id>.json for valid ids", async () => {
-    const created = await scaffoldProject(baseConfig(), tmp);
+    const { created } = await scaffoldProject(baseConfig(), tmp);
     expect(created).toContain(".mcp/supabase.json");
     await fs.access(path.join(tmp, ".mcp", "supabase.json"));
   });

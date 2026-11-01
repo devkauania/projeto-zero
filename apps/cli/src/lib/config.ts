@@ -1,5 +1,6 @@
 import Conf from "conf";
-import { chmodSync, lstatSync } from "node:fs";
+import envPaths from "env-paths";
+import { chmodSync, lstatSync, realpathSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -29,6 +30,9 @@ export interface WizardConfig {
 
 type StoreSchema = { wizard: WizardConfig | null };
 
+/** The subagents the CLI can scaffold. */
+export const AGENT_IDS = ["coder", "designer", "auditor", "mcp"] as const;
+
 /**
  * Allowed shape of an MCP connector id. Connector ids become file names
  * (`.mcp/<id>.json`) in `scaffoldProject`, so anything that could escape the
@@ -45,6 +49,20 @@ export class ConfigValidationError extends Error {
   }
 }
 
+/**
+ * Thrown when the store file is not valid JSON. Names the file, because Conf's
+ * own error is a bare JSON parse message that does not say what it was reading.
+ */
+export class ConfigStoreCorruptError extends ConfigValidationError {
+  constructor(readonly filePath: string, cause: string) {
+    super(
+      `saved configuration ${filePath} is not valid JSON (${cause}). ` +
+        `Run "reset" in a terminal, or delete the file, then run "init" again.`
+    );
+    this.name = "ConfigStoreCorruptError";
+  }
+}
+
 /** Throws ConfigValidationError unless `id` is a safe connector id. */
 export function assertValidConnectorId(id: unknown): asserts id is string {
   if (typeof id !== "string" || !CONNECTOR_ID_RE.test(id)) {
@@ -55,17 +73,28 @@ export function assertValidConnectorId(id: unknown): asserts id is string {
 }
 
 /**
- * Light shape check for a wizard config read from disk. Fails closed with a
- * clear error instead of silently dropping entries, so a tampered config is
- * visible to the user.
+ * Shape check for a wizard config, run on everything read from disk and again
+ * at the scaffolder before its first write. Fails closed with a clear error
+ * instead of silently dropping entries, so a tampered config is visible to the
+ * user and cannot leave a half-written scaffold behind.
  */
 export function validateWizardConfig(config: unknown): asserts config is WizardConfig {
   if (config === null || typeof config !== "object" || Array.isArray(config)) {
     throw new ConfigValidationError("saved configuration is not an object");
   }
   const c = config as Record<string, unknown>;
-  if (c.agents !== undefined && !Array.isArray(c.agents)) {
+  if (typeof c.projectName !== "string" || c.projectName.trim() === "") {
+    throw new ConfigValidationError("saved configuration: projectName must be a non-empty string");
+  }
+  if (!Array.isArray(c.agents)) {
     throw new ConfigValidationError("saved configuration: agents must be an array");
+  }
+  for (const agent of c.agents) {
+    if (!(AGENT_IDS as readonly unknown[]).includes(agent)) {
+      throw new ConfigValidationError(
+        `saved configuration: unknown agent ${JSON.stringify(agent)} (expected one of ${AGENT_IDS.join(", ")})`
+      );
+    }
   }
   if (c.mcpConnectors !== undefined) {
     const m = c.mcpConnectors;
@@ -74,7 +103,34 @@ export function validateWizardConfig(config: unknown): asserts config is WizardC
         "saved configuration: mcpConnectors must be an object"
       );
     }
-    for (const id of Object.keys(m)) assertValidConnectorId(id);
+    for (const [id, connector] of Object.entries(m)) {
+      assertValidConnectorId(id);
+      if (connector === null || typeof connector !== "object" || Array.isArray(connector)) {
+        throw new ConfigValidationError(
+          `saved configuration: MCP connector ${JSON.stringify(id)} must be an object`
+        );
+      }
+    }
+  }
+  if (c.defaults !== undefined) {
+    const d = c.defaults as { targetDir?: unknown } | null;
+    if (d === null || typeof d !== "object" || typeof d.targetDir !== "string") {
+      throw new ConfigValidationError("saved configuration: defaults.targetDir must be a string");
+    }
+    // A bare `generate` writes here with nobody having asked for that place, so
+    // it stays under the cwd. Both separators and drive forms count on every
+    // platform: the file may have been made on another one. -d is unaffected.
+    const parts = d.targetDir.split(/[\\/]/);
+    if (
+      path.posix.isAbsolute(d.targetDir) ||
+      path.win32.isAbsolute(d.targetDir) ||
+      /^[a-zA-Z]:/.test(d.targetDir) ||
+      parts.includes("..")
+    ) {
+      throw new ConfigValidationError(
+        `saved configuration: defaults.targetDir must stay inside the current directory, got ${JSON.stringify(d.targetDir)}. Pass -d <dir> to generate anywhere else.`
+      );
+    }
   }
 }
 
@@ -103,6 +159,51 @@ function safePrefixes(): string[] {
   return out;
 }
 
+/**
+ * Resolve links in the deepest part of `target` that exists, and keep the rest
+ * as written. The store may not exist yet, so plain realpath would throw; and
+ * checking only the path as written lets a link higher up walk out of scope.
+ */
+function realpathOfDeepestExisting(target: string): string {
+  const missing: string[] = [];
+  let current = target;
+  for (;;) {
+    try {
+      return path.join(realpathSync.native(current), ...missing.reverse());
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException)?.code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
+      // A dangling link: where it leads cannot be checked, so refuse it.
+      let dangling = false;
+      try {
+        dangling = lstatSync(current).isSymbolicLink();
+      } catch {
+        /* simply not there */
+      }
+      if (dangling) {
+        throw new Error(`ANTIGRAVITY_CONFIG_DIR: refusing symlink at "${current}"`);
+      }
+      const parent = path.dirname(current);
+      if (parent === current) return target;
+      missing.push(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+/** Folders under home that hold credentials: inside the scope, and still no. */
+const CREDENTIAL_DIRS = [".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", ".config/gcloud"];
+
+function isCredentialDir(realHome: string, real: string): boolean {
+  const insensitive = process.platform === "win32" || process.platform === "darwin";
+  const norm = (s: string) => (insensitive ? s.toLowerCase() : s);
+  const rel = norm(path.relative(realHome, real)).split(path.sep);
+  return CREDENTIAL_DIRS.some((dir) => {
+    const parts = norm(dir).split("/");
+    return parts.every((part, i) => rel[i] === part);
+  });
+}
+
 function validateConfigDir(override: string): string {
   // Reject absurdly short / empty overrides.
   if (!override || override.length < 2) {
@@ -129,11 +230,12 @@ function validateConfigDir(override: string): string {
     if (code !== "ENOENT") throw err;
   }
 
-  // Confine to home or tmp. On POSIX this is a simple prefix check; on
-  // Windows path.resolve normalizes drive letters.
-  const prefixes = safePrefixes();
-  const ok = prefixes.some((p) => {
-    const rel = path.relative(p, resolved);
+  // Confine to home or tmp, comparing where the paths really lead: a link
+  // further up must not walk out of scope, and home or tmp may themselves be
+  // reached through a link (macOS /tmp) or a short name (Windows RUNNER~1).
+  const real = realpathOfDeepestExisting(resolved);
+  const ok = safePrefixes().some((p) => {
+    const rel = path.relative(realpathOfDeepestExisting(p), real);
     return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
   });
   if (!ok) {
@@ -142,8 +244,21 @@ function validateConfigDir(override: string): string {
       `(home or tmp). Refusing to write the Conf store there.`
     );
   }
+  let home: string | undefined;
+  try {
+    home = realpathOfDeepestExisting(path.resolve(os.homedir()));
+  } catch {
+    /* no home: nothing under it to protect */
+  }
+  if (home && isCredentialDir(home, real)) {
+    throw new Error(
+      `ANTIGRAVITY_CONFIG_DIR: "${resolved}" is a credentials folder. Refusing to write the Conf store there.`
+    );
+  }
   return resolved;
 }
+
+const STORE_PROJECT_NAME = "antigravity-wizard";
 
 /**
  * Construct the Conf-backed store. Lazily called so each invocation picks up
@@ -154,11 +269,21 @@ function validateConfigDir(override: string): string {
 function getStore(): Conf<StoreSchema> {
   const override = process.env.ANTIGRAVITY_CONFIG_DIR;
   const cwd = override ? validateConfigDir(override) : undefined;
-  return new Conf<StoreSchema>({
-    projectName: "antigravity-wizard",
-    ...(cwd ? { cwd } : {}),
-    defaults: { wizard: null },
-  });
+  try {
+    return new Conf<StoreSchema>({
+      projectName: STORE_PROJECT_NAME,
+      ...(cwd ? { cwd } : {}),
+      defaults: { wizard: null },
+    });
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      // Conf's constructor is what parses the file, so it never returns an
+      // instance to ask for the path. Same location Conf computes by default.
+      const dir = cwd ?? envPaths(STORE_PROJECT_NAME, { suffix: "nodejs" }).config;
+      throw new ConfigStoreCorruptError(path.join(dir, "config.json"), err.message);
+    }
+    throw err;
+  }
 }
 
 /**
@@ -198,7 +323,17 @@ export function loadConfig(): WizardConfig | null {
 }
 
 export function clearConfig(): void {
-  getStore().clear();
+  try {
+    getStore().clear();
+  } catch (err) {
+    // A store that cannot be parsed has nothing worth keeping and no way to be
+    // repaired through Conf, so reset has to be able to remove the file itself.
+    if (err instanceof ConfigStoreCorruptError) {
+      rmSync(err.filePath, { force: true });
+      return;
+    }
+    throw err;
+  }
 }
 
 /**

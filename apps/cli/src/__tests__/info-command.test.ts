@@ -51,6 +51,17 @@ describe("info command — defensive rendering", () => {
     expect((joined.match(/\(none\)/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
+  it("prints the saved agents and the real includeTemplates value", async () => {
+    saveConfig({ projectName: "shown", agents: ["coder", "auditor"], includeTemplates: false });
+    await infoCommand.parseAsync(["node", "info"]);
+    const joined = logs.join("\n");
+    expect(joined).toMatch(/- .*coder/);
+    expect(joined).toMatch(/- .*auditor/);
+    expect(joined).not.toMatch(/- .*designer/);
+    expect(joined).toMatch(/includeTemplates: .*no/);
+    expect(joined).not.toMatch(/includeTemplates: .*yes/);
+  });
+
   it("survives a connector missing its tools array", async () => {
     const weird = {
       projectName: "weird",

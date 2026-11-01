@@ -21,12 +21,17 @@ The most interesting piece is the **swarm** — a command that spawns multiple C
 
 **Problem.** A swarm launcher that takes user-supplied prompts and spawns child processes has a classic command-injection surface. If any part of the argv is concatenated into a shell string, a prompt like `"; rm -rf $HOME; echo "` gets executed by the shell.
 
-**Decision.** Every child-process spawn in the codebase takes an **argv array** and is called with `shell: false`. Prompt bodies never touch argv — they are streamed to the child's stdin. A regex test in the test suite greps the spawner source for any future `argv.join(` or `shell: true` and fails the build if one slips in.
+**Decision.** Every child-process spawn in the codebase takes an **argv array** and is called with `shell: false`. Prompt bodies never touch argv — they are streamed to the child's stdin. `swarm-live.test.ts` runs the built CLI against a fake `claude` first on PATH and asserts on the argv, stdin, cwd and env it actually received, including a rule with spaces and `&` that any shell would split.
 
 From [`apps/cli/src/lib/swarm/agent-spawner.ts`](../apps/cli/src/lib/swarm/agent-spawner.ts):
 
 ```ts
-const proc = spawn(bin, argv, {
+// On Windows this finds claude on PATH itself and reads npm's .cmd for its target,
+// because spawn cannot run a .cmd without cmd.exe, and with a bare name it looks in
+// the cwd first, which here is a checkout of the repo the agent works on.
+const command = resolveAgentCommand(bin, argv, env);
+
+const proc = spawn(command.bin, command.argv, {
   cwd,
   env: childEnv,
   shell: false, // CRITICAL: never invoke a shell. argv is taken literally.
@@ -190,10 +195,11 @@ if (rel.startsWith("..") || path.isAbsolute(rel)) {
 
 **Problem.** The CLI persists wizard state via the `conf` package. The data dir is overridable with `ANTIGRAVITY_CONFIG_DIR` (useful for CI and sandboxes). A malicious or mis-configured env var could point the store at `~/.ssh/` or a world-writable path like `/tmp/public`, widening the blast radius if the Conf file ever leaked sensitive data.
 
-**Decision.** Two checks before `conf` sees the override:
+**Decision.** Three checks before `conf` sees the override:
 
 1. `lstat` the path — if it's a symlink, refuse. (Blocks the classic "point env var at a symlink to `~/.ssh`" attack.)
-2. Compute `path.relative` from `os.homedir()` and `os.tmpdir()` — at least one must be an ancestor. Anything outside both is refused.
+2. Resolve links in the deepest part of the path that exists, then compute `path.relative` from the same for `os.homedir()` and `os.tmpdir()` — at least one must be an ancestor. Anything outside both is refused, including through a link higher up.
+3. Refuse credentials folders under home (`.ssh`, `.gnupg`, `.aws`, `.azure`, `.kube`, `.docker`, `.config/gcloud`), which pass the second check.
 
 From [`apps/cli/src/lib/config.ts`](../apps/cli/src/lib/config.ts):
 
@@ -217,10 +223,10 @@ function validateConfigDir(override: string): string {
     if (code !== "ENOENT") throw err;
   }
 
-  // Confine to home or tmp.
-  const prefixes = safePrefixes();
-  const ok = prefixes.some((p) => {
-    const rel = path.relative(p, resolved);
+  // Confine to home or tmp, comparing where the paths really lead.
+  const real = realpathOfDeepestExisting(resolved);
+  const ok = safePrefixes().some((p) => {
+    const rel = path.relative(realpathOfDeepestExisting(p), real);
     return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
   });
   if (!ok) {
@@ -229,6 +235,7 @@ function validateConfigDir(override: string): string {
       `(home or tmp). Refusing to write the Conf store there.`
     );
   }
+  // Credentials folders under home are refused here. See config.ts.
   return resolved;
 }
 ```
@@ -262,7 +269,7 @@ Current gate set (from [`scripts/preflight.mjs`](../scripts/preflight.mjs)):
 - **repo-metadata** — package.json has valid `name`, `version`, `description`, `repository`, `license`, etc.
 - **unreplaced-token scan** — no `{{…}}`, `TODO`, or `FIXME` strings in shipping surface
 - **check-no-self-dep** — package.json does not depend on itself (CI guard after a real v1.0.0 bug)
-- **check-non-tty-connectors** — static tripwire on the non-TTY default for MCP connectors (CI guard after a real v1.0.0 bug)
+- **pack-smoke** — installs the packed tarball into a temp prefix outside the repo and runs `--version`, `--help`, `init`, `generate` and a `swarm` dry run through the installed bins, which catches a missing shebang, bin, runtime dependency or seed that the repo's own `node_modules` would hide
 - **single-family LLM lock** — live product surface references only Claude, not other LLM vendors (enforces the project's single-family policy)
 - **check-workflows** — every GitHub Action is pinned to a full commit SHA, every workflow declares top-level `permissions:` (never `write-all`), no `pull_request_target`, `id-token: write` only in `release.yml`, and the release gates (production `npm audit`, `--ignore-scripts` publish, minimum Node/npm versions) are still present
 
@@ -334,7 +341,7 @@ scripts/
 ├── repo-metadata-check.mjs
 ├── files-exist.mjs
 ├── check-no-self-dep.mjs
-├── check-non-tty-connectors.mjs
+├── pack-smoke.mjs         # installs the tarball and uses it
 ├── check-no-multi-llm.mjs
 ├── check-workflows.mjs   # GitHub Actions hardening guard
 ├── record-demo.mjs       # records a real CLI run for the README demo

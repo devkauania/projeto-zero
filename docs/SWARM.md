@@ -20,14 +20,17 @@ antigravity swarm --count 3
 # Same thing, explicit:
 antigravity swarm --count 3 --dry-run
 
-# Spawn for real. Requires `claude --version` on PATH.
+# Spawn for real. Requires `claude --version` on PATH, and a repo with at
+# least one commit, because each agent gets a git worktree of HEAD.
 antigravity swarm --count 3 --live
 ```
 
-Prompts live in `.agents/prompts/*.md`. The swarm reads every `.md` file
-in that directory (sorted by filename), and round-robins them across your
-`--count` agents. Frontmatter is stripped when selecting a first-line
-summary for the plan output.
+Prompts live in `.agents/prompts/*.md`. The swarm takes the `.md` files in that
+directory sorted by filename and gives them to your `--count` agents in order
+(the default `--count` is 1). With more agents than prompts it wraps around. With
+more prompts than agents, the extra prompts **do not run**: the command prints a
+warning naming them, and `--count` set to the number of prompts runs them all.
+Frontmatter is stripped when selecting a first-line summary for the plan output.
 
 ---
 
@@ -41,18 +44,17 @@ that file and updating the drift-guard tests.
 Each agent runs `claude -p --verbose --output-format stream-json ...` in
 non-interactive print mode. The prompt body is piped to the child's stdin and
 the agent's worktree is the child's working directory (spawn `cwd`); neither
-appears on argv. Every flag the envelope emits is checked by a contract test
-against a recorded list of real Claude Code CLI flags
-(`CLAUDE_CLI_FLAGS`, taken from the official CLI reference and
-`claude --help`).
+appears on argv. Every flag the envelope emits is pinned by a test to a literal list checked by
+hand against the official CLI reference and `claude --help`. Where Claude Code
+is installed, the same test also compares that list with the real `--help`.
 
 | Flag | Default | Why |
 |---|---|---|
 | `-p` / `--verbose` | always | Print (non-interactive) mode. `--output-format`, `--max-turns` and `--max-budget-usd` only work with `-p`, and `stream-json` under `-p` requires `--verbose`. |
 | `--permission-mode` | `acceptEdits` (work) / `plan` (verify) | `bypassPermissions` requires both `--permission-mode bypassPermissions` AND `--i-understand` at the top-level CLI. Verify mode is always read-only. |
 | `--allowed-tools` | `Read Write Edit Bash(git:*) Bash(npm:*)` | Calls Claude Code auto-approves without asking. This does not restrict other tools by itself. Verify mode always uses `Read Grep Glob Bash(git diff:*)`. Note that `Bash(npm:*)` runs any package script, i.e. arbitrary code. |
-| `--disallowed-tools` | `Bash(rm:*) Bash(curl:*) Bash(wget:*) Bash(ssh:*) WebFetch WebSearch` | Deny rules. `WebFetch`/`WebSearch` remove those tools entirely; the `Bash(...)` rules refuse commands that start with that text. A speed bump, **not a sandbox** (see below). |
-| `--max-turns` | `20` | Per-agent turn cap. Must be a whole number >= 1; anything else is refused. |
+| `--disallowed-tools` | `Bash(rm:*) Bash(curl:*) Bash(wget:*) Bash(ssh:*) WebFetch WebSearch` | Deny rules. `WebFetch`/`WebSearch` remove those tools entirely; the `Bash(...)` rules refuse commands that start with that text. A speed bump, **not a sandbox** (see below). In verify mode your rules are added to these; in work mode they replace them. |
+| `--max-turns` | `20` | Per-agent turn cap. Must be a whole number >= 1 written in digits; anything else, `1e3` and `0x10` included, is refused. |
 | `--max-budget-usd` | `5.00` | Per-agent USD cap. Must be a number >= 0.01 written with a dot (`0.50`, not `0,50`); anything else is refused rather than replaced by the default. |
 | `--output-format` | `stream-json` | Machine-parseable. The live renderer streams each line with an `[agent-N]` prefix and also parses it to decide success (see below). The `--max-budget-usd` value is passed through to each child `claude` process; the launcher itself does not track spend. |
 | working directory (spawn `cwd`) | `.claude/worktrees/<swarm-id>/agent-<n>` | Each agent starts in its own git worktree. This is a starting directory, not a sandbox: Claude Code can still be asked to touch paths outside it. |
@@ -64,10 +66,11 @@ agent died at argument parsing; they were removed, and `swarm --temperature`
 no longer exists.
 
 Prompt content is **never** placed on argv. It is read from the prompt
-file and streamed to the child's stdin. A static test
-(`apps/cli/src/__tests__/swarm-spawner.test.ts`) greps the spawner source
-for `argv.join`, `exec(`, `execSync(`, and `shell: true`, failing the
-build if any appear.
+file and streamed to the child's stdin. `apps/cli/src/__tests__/swarm-live.test.ts`
+checks this on what a fake `claude`, first on PATH, actually receives: its cwd,
+argv, stdin and env, with secrets set in the parent's env. If a child exits
+without reading a prompt too large for the pipe, that agent is reported as failed
+and its siblings carry on.
 
 ---
 
@@ -97,6 +100,13 @@ Even with correct names, be clear about what the lists do:
 - `--allowed-tools` only decides what runs without a prompt; in `-p` mode a
   call that is neither allowed nor auto-approved by the permission mode is
   refused.
+- `Bash(git diff:*)` on the verify allow list is a prefix rule, and `git diff
+  --output=<file>` writes a file. Verify mode denies `Bash(git diff --output:*)`,
+  but a deny rule matches the command as written, so `git -c x=y diff --output=<file>`
+  gets past it. Neither that rule nor plan mode has been tested against real
+  Claude Code for this case. Treat verify mode as a review convention
+  backed by plan mode, not as a guarantee, and use a read-only checkout or a
+  container if a review must not be able to write.
 - The controls that actually hold are the permission mode (`acceptEdits` for
   work, `plan` for verify), the per-agent git worktree and the child env
   allowlist. If you need hard filesystem or network limits, run the swarm
@@ -210,10 +220,10 @@ Drop the file in `.agents/prompts/` and it shows up in the next swarm run.
 `acceptEdits` unless `--i-understand` is passed at the same invocation.
 This is a deliberate anti-gaming tripwire: an LLM operator cannot enable
 full bypass without the human operator's explicit consent in the shell
-history. The safety-envelope test
-(`swarm-safety-envelope.test.ts > refuses bypassPermissions unless
-iUnderstand:true`) asserts this invariant; any change that breaks it
-fails CI.
+history. `swarm-live.test.ts` runs the built CLI with and without the flag and
+reads the permission mode a fake `claude` actually received, and
+`swarm-safety-envelope.test.ts` covers the function underneath; any change that
+breaks it fails CI.
 
 ```bash
 # This is downgraded to acceptEdits (no bypass).
@@ -230,10 +240,15 @@ antigravity swarm --count 1 --permission-mode bypassPermissions --i-understand -
 | Symptom | Likely cause |
 |---|---|
 | `swarm: no prompts discovered` | `.agents/prompts/` is empty or missing. `generate` only creates the folder; write one `.md` prompt file per task in it, or pass `--prompts <dir>`. |
-| `swarm: invalid sessionId` | You overrode a session-prefix with non-`[a-zA-Z0-9_-]` characters. |
-| `git worktree add failed` | A previous run's worktree wasn't cleaned up. `git worktree remove --force <path>` or `git worktree prune`. |
+| `invalid swarmId` | You overrode a session-prefix with non-`[a-zA-Z0-9_-]` characters. A long prefix is shortened to fit, keeping the timestamp. |
+| `swarm: this repository has no commits yet` | `--live` checks out HEAD for each agent. Make a first commit. |
+| `swarm: ... is not a git repository` | Run from inside a repo, or `git init` and commit. |
+| `git worktree add failed` | Usually a branch or path left from a previous run: `git worktree remove --force <path>` or `git worktree prune`. No agent has started, and the worktrees this run had made are already removed. |
+| `swarm: refusing this plan ... metacharacter` | A `--allowed-tools` / `--disallowed-tools` rule contains `$`, a backtick, `&&`, `\|\|` or `;`. Dry runs and live runs refuse it alike, before any worktree exists. |
+| `failed: prompt not delivered` | The child exited without reading its prompt. |
 | Agent hangs without output | Confirm `claude --version` is on PATH and `CLAUDE_CODE_OAUTH_TOKEN` is set. Without the token the child exits silently. |
-| `failed: spawn failed: spawn claude ENOENT` on Windows | The launcher spawns `claude` without a shell (no argv interpolation). An npm-installed Claude Code on Windows is only a `claude.cmd` shim, which cannot be spawned that way. Install the native Claude Code build so a real `claude.exe` is on PATH. |
+| `failed: spawn refused: spawn claude ENOENT` | No `claude.exe`, `claude.cmd` or similar in any absolute `PATH` folder. The launcher looks there itself on Windows and does not look in the current folder, because the agent's folder is a checkout of the repo it is working on. |
+| `failed: spawn refused: ... is a batch file` | On Windows, `claude` on PATH is a `.cmd` that is not in the shape npm writes, so its target could not be found. It is not run through `cmd.exe`, which would re-parse the agent's arguments. Put `claude.exe` on PATH. |
 | `failed: exited with code 1` | The child `claude` rejected its arguments or errored. Its stderr is shown with the `[agent-N]` prefix. |
 | `failed: ... not stream-json` | The child printed something that is not stream-json on stdout, so the run cannot be trusted as a success. |
 

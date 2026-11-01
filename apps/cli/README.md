@@ -50,6 +50,12 @@ Initialize the wizard with interactive prompts. It will ask for:
 
 This command writes your choices to disk (persisted to a local config file via the `conf` package), but **does not** generate any files.
 
+Not in a terminal, it reads three lines from stdin instead: name, subagents (separated by spaces or commas), and whether to include templates (`y` or `n`). A blank line takes the default. If fewer than three lines arrive, or an answer is not understood, nothing is saved and it exits 1. No connectors are selected this way.
+
+```bash
+printf 'demo-app\ncoder auditor\ny\n' | npx -y @projeto-zero/cli init
+```
+
 ```bash
 npx -y @projeto-zero/cli init
 ```
@@ -64,7 +70,10 @@ npx -y @projeto-zero/cli generate [options]
 ```
 
 **Options:**
-- `-d, --dir <path>`: Provide a target directory. If no directory is supplied and there is no default loaded, you will be interactively prompted for the exact output directory location.
+- `-d, --dir <path>`: Provide a target directory. If no directory is supplied and there is no default loaded, you will be interactively prompted for the exact output directory location (not in a terminal, it exits 1 instead).
+- `--force`: Overwrite files that already exist. Without it, existing files are kept and listed as skipped, so running `generate` in an existing repo, or twice, never destroys anything.
+
+It exits 1 if there is no saved configuration, and refuses to write through a symbolic link inside the target, even with `--force`.
 
 ### `info`
 Shows a summary of your currently saved setup configuration without making any changes.
@@ -81,9 +90,9 @@ npx -y @projeto-zero/cli reset
 ```
 
 ### `swarm`
-Launches a parallel Claude Code agent swarm against the prompts in `.agents/prompts/*.md`. Dry-run is the default — agents only spawn when you pass `--live`. See [`docs/SWARM.md`](https://github.com/devkauania/projeto-zero/blob/main/docs/SWARM.md) for safety defaults, grid layouts, and the `--i-understand` gate.
+Launches a parallel Claude Code agent swarm against the prompts in `.agents/prompts/*.md`. Dry-run is the default — agents only spawn when you pass `--live`, which needs a git repository with at least one commit. See [`docs/SWARM.md`](https://github.com/devkauania/projeto-zero/blob/main/docs/SWARM.md) for safety defaults, grid layouts, and the `--i-understand` gate.
 
-> Note: `generate` creates `.agents/prompts/` as an empty folder (with a `.gitkeep`). You populate it with your own `*.md` prompt files before running `swarm`.
+> Note: `generate` creates `.agents/prompts/` as an empty folder (with a `.gitkeep`). You populate it with your own `*.md` prompt files before running `swarm`. `--count` defaults to 1; with more prompts than agents the extra ones do not run, and the command warns you which.
 
 ```bash
 npx -y @projeto-zero/cli swarm --count 3          # preview plan (dry-run)

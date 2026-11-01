@@ -5,11 +5,79 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- End-to-end tests: `swarm --live` against a fake `claude` first on PATH, the
+  prompts through a real pseudo-terminal, and a `pack-smoke` preflight check that
+  installs the packed tarball and uses it. `pack-smoke` replaces the
+  `check-non-tty-connectors` regex, which the simplest reintroduction of that bug
+  walked past.
 - A `projeto-zero` command. The package's `bin` now lists `projeto-zero`
   next to `antigravity`; both run the same CLI. 1.1.3 on npm only installs
   `antigravity`.
 
+### Changed
+- `generate` no longer replaces existing files: it writes the missing ones and
+  lists what it skipped. Pass the new `--force` to overwrite. It also exits 1
+  when there is no saved config (it used to exit 0), and when piped with no
+  directory to use (it used to hang).
+- `init` not in a terminal now exits 1 when it saves nothing: fewer than three
+  lines on stdin, an unknown subagent, or a templates answer other than y or n.
+  It used to exit 0 and say "Setup cancelled". It waits for stdin instead of
+  giving up after 300 ms, and takes subagents separated by commas too.
+- In `swarm --mode verify`, `--disallowed-tools` now adds to the default deny
+  list instead of replacing it, and `git diff --output` is denied, since `git diff`
+  is allowed there and that option writes a file.
+- `reset` not in a terminal now exits 1. It clears nothing there, and used to exit 0.
+- A saved `defaults.targetDir` must stay under the current directory. `-d` is not
+  limited.
+
 ### Fixed
+- `swarm --live` could not start Claude Code installed with npm on Windows: it
+  failed with `spawn claude ENOENT` while the same `claude` worked in a terminal.
+  The launcher now reads the `.cmd` npm writes and starts its target directly,
+  with no shell.
+- On Windows, `swarm --live` would run a `claude.exe` committed to the repo it was
+  working on, because spawn looks in the child's folder before PATH.
+- A failure creating a worktree partway through left the earlier agents' worktrees
+  and branches behind. They are now removed.
+- `ANTIGRAVITY_CONFIG_DIR` accepted `~/.ssh`, the case its check exists to prevent.
+  Credentials folders under home are refused, also through a link.
+- A tampered `defaults.targetDir` such as `../../x` made a bare `generate` write
+  outside the current directory and exit 0.
+- `--max-budget-usd` of 1e21 or more reached Claude Code in exponent form.
+- `generate` destroyed a hand-written `CLAUDE.md` and customised agents when run
+  in an existing repo, as the Quickstart suggests, or run twice, and reported
+  success.
+- `init` with a slow stdin producer lost its answers and exited 0, so
+  `init && generate` could go green with no files written.
+- A saved config that is not valid JSON could not be repaired with the CLI. Every
+  command failed with a bare parse message; they now name the file, and `reset`
+  clears it.
+- `ANTIGRAVITY_CONFIG_DIR` could leave its allowed scope through a link above the
+  last path component, and `generate` could write outside `-d` through a link
+  inside the target, such as one in a cloned repo. Both are refused now.
+- `swarm --live` crashed with a raw stack trace, taking sibling agents with it,
+  when a child exited before reading a large prompt. That agent is now reported
+  as failed and the others carry on.
+- A rule with a shell metacharacter (`--allowed-tools 'Bash(a && b)'`) passed
+  `--dry-run`, then failed `--live` after creating worktrees, and was accepted
+  with `bypassPermissions`. It is now refused the same way in every case, before
+  anything is created.
+- `swarm --count` and `--max-turns` accepted `0x10` and `1e21`, the latter
+  reaching Claude Code as `1e+21`. Whole numbers in digits only now.
+- A `--session-prefix` of 18 characters or more cut off the timestamp, so a second
+  run failed with "branch already exists". The prefix is shortened instead.
+- `swarm --live` in a repo with no commits, or outside a repo, now says so instead
+  of showing git's `fatal: invalid reference: HEAD`. The README Quickstart gained
+  the missing commit step.
+- `swarm` silently skipped prompts when `--count` was below the number of prompts,
+  which is the default with `--count` 1. It now warns and names them.
+- A config with a non-string or unknown agent, a null connector or no project name
+  crashed `generate` partway through, or wrote `# undefined`. It is now refused
+  before the first write.
+- `preflight`, `verdict` and `session-gate` failed on any clone path containing a
+  space.
+- The test suite overwrote the developer's real saved config. It now runs against
+  a sandbox.
 - `swarm --max-budget-usd` and `--max-turns` silently replaced values they
   could not use with the defaults. `--max-budget-usd 0,5` (comma decimal),
   `0` or `abc` became a 5.00 USD cap per agent, a higher spend limit than the

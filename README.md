@@ -54,12 +54,20 @@ npx @projeto-zero/cli init           # wizard: project name, subagents, MCP conn
 npx @projeto-zero/cli generate -d .  # write the scaffold into the current directory
 ```
 
+`generate` never replaces a file that already exists. It writes the missing
+ones and lists what it skipped, so it is safe in an existing repo and safe to
+re-run. Pass `--force` to overwrite.
+
 `init` is interactive in a terminal. In scripts and CI it reads the three
-answers (name, subagents, templates) from stdin instead:
+answers (name, subagents, templates) from stdin instead, one per line:
 
 ```bash
 printf 'demo-app\ncoder auditor\ny\n' | npx @projeto-zero/cli init
 ```
+
+If fewer than three lines arrive, or an answer is not understood, it saves
+nothing and exits 1. `generate` also exits 1 when there is no saved config, so
+`init && generate` stops at the first problem.
 
 Output of `generate` for that selection, from `@projeto-zero/cli@1.1.3` on npm:
 
@@ -93,10 +101,12 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 ```
 
 Then put prompt files in `.agents/prompts/` and preview a swarm. Dry-run is
-the default; nothing is spawned until you pass `--live`:
+the default; nothing is spawned until you pass `--live`. Each agent gets a git
+worktree, so the repo needs a first commit before `--live`:
 
 ```bash
 npx @projeto-zero/cli swarm --count 2          # print the plan only
+git add . && git commit -m "first commit"      # worktrees need a commit to check out
 npx @projeto-zero/cli swarm --count 2 --live   # create worktrees and spawn claude
 ```
 
@@ -116,7 +126,7 @@ npx @projeto-zero/cli swarm --count 2 --live   # create worktrees and spawn clau
 | Command | What it does |
 |---|---|
 | `init` | Wizard that saves a project config: name, subagents (`coder`, `designer`, `auditor`, `mcp`), MCP connectors, whether to include templates. Writes no project files. |
-| `generate [-d <dir>]` | Writes `CLAUDE.md`, `.agents/<id>.md`, `.agents/prompts/.gitkeep`, `skills/<id>/SKILL.md` and one `.mcp/<connector>.json` per selected connector. |
+| `generate [-d <dir>] [--force]` | Writes `CLAUDE.md`, `.agents/<id>.md`, `.agents/prompts/.gitkeep`, `skills/<id>/SKILL.md` and one `.mcp/<connector>.json` per selected connector. Existing files are kept unless you pass `--force`. |
 | `info` | Prints the saved config. |
 | `reset` | Clears the saved config after a confirmation prompt (needs an interactive terminal). |
 | `swarm` | Plans, and with `--live` runs, up to 15 Claude Code agents over the prompts in `.agents/prompts/*.md`. Options and defaults: [`docs/SWARM.md`](docs/SWARM.md). |
@@ -161,8 +171,8 @@ flowchart LR
 - **One place builds the command line.** Every spawn goes through
   `buildClaudeArgv()` in
   [`safety-envelope.ts`](apps/cli/src/lib/swarm/safety-envelope.ts). It
-  emits only flags from a recorded list of real Claude Code flags (a
-  contract test checks this) and only emits `bypassPermissions` when both
+  emits only flags verified against the real Claude Code CLI (tests pin that
+  list, and compare it with `claude --help` where Claude Code is installed) and only emits `bypassPermissions` when both
   `--permission-mode bypassPermissions` and `--i-understand` are given.
   Otherwise work mode uses `acceptEdits` and verify mode `plan`.
 - **The prompt never touches argv or a shell.** The child is spawned with an
@@ -191,8 +201,11 @@ A guided tour with the code inline is in
   (`--max-budget-usd`, default `5.00`; `--max-turns`, default `20`); the
   launcher itself does not meter spend. On `main`, invalid values are
   refused instead of silently replaced by the defaults.
-- **Config store.** `ANTIGRAVITY_CONFIG_DIR` must be under your home or temp
-  directory and cannot be a symlink. On POSIX the file is `chmod 0600`.
+- **Config store.** `ANTIGRAVITY_CONFIG_DIR` must really lead somewhere under
+  your home or temp directory: it cannot be a link, and a link further up the
+  path cannot walk it out of scope. On POSIX the file is `chmod 0600`.
+- **Generated files.** `generate` refuses to write through a link inside the
+  target (a cloned repo can carry one at `.agents`), even with `--force`.
 - **Releases** are built by [`release.yml`](.github/workflows/release.yml)
   on `v*.*.*` tags: actions pinned to commit SHAs, minimal permissions, a
   production `npm audit` gate, preflight, a tag/version check, build and
@@ -215,11 +228,15 @@ node scripts/preflight.mjs              # build, type-check, tests, static gates
 node apps/cli/dist/index.js --help      # run the CLI from the checkout
 ```
 
-`preflight` is the same gate CI runs on Ubuntu and Windows. It runs the
-build, `tsc --noEmit`, the Vitest suite and 8 static checks (package
-manifest and tarball contents, package metadata, leftover-token scan,
-self-dependency guard, non-TTY connector default, Claude-only wording guard,
-workflow hardening) and prints `preflight: ALL PASS` only when every one
+The suite runs the built CLI end to end, with a fake `claude` first on PATH for
+`swarm --live` and a real pseudo-terminal for the prompts; it never contacts
+Claude Code's service. `preflight` is the same gate CI runs on Ubuntu and
+Windows, and CI also runs it from a path with a space and an accent. The
+installed-package check needs network access for the package's dependencies. It runs the
+build, `tsc --noEmit`, the Vitest suite and 8 more checks (package manifest
+and tarball contents, installing the packed tarball and using it through both
+bins, package metadata, leftover-token scan, self-dependency guard, Claude-only
+wording guard, workflow hardening) and prints `preflight: ALL PASS` only when every one
 passes. `node scripts/verdict.mjs` turns that result into a single
 `PRODUCTION-READY` / `NOT-READY` line.
 
@@ -237,6 +254,10 @@ passes. `node scripts/verdict.mjs` turns that result into a single
   `.claude/skills/` (see [the table above](#where-the-generated-files-go)).
 - `swarm --live` streams each agent's output with an `[agent-N]` prefix;
   there is no grid UI yet.
+- The tests drive `swarm --live` with a fake `claude`, so what real Claude Code
+  does with each flag (plan mode, the deny rules, how it reports errors) is not
+  covered automatically. [`apps/cli/VERIFICATION.md`](apps/cli/VERIFICATION.md)
+  lists the rows that remain manual.
 - The command's help text still uses the project's original name,
   `antigravity`, as do the `ANTIGRAVITY_CONFIG_DIR` variable and the only
   command a 1.1.3 global install provides (`projeto-zero` arrives as a second

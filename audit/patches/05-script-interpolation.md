@@ -1,5 +1,12 @@
 # Patch 05 — Script interpolation audit + audit-tarball conversion (ledger row 9)
 
+> **Correction, 2026-11-01.** The table below calls `shell: true` with an array
+> safe because "Node handles quoting". It does not: Node joins the array with
+> spaces, unquoted. On any clone path with a space, preflight, verdict and
+> session-gate failed all their script gates with `Cannot find module`. These
+> scripts now run node scripts with `process.execPath` and no shell, and only npm
+> goes through the shell, as a fixed string with the path passed as `cwd`.
+
 **Closes:** ledger row 9 (Script interpolation)
 **Severity:** Medium
 **Files touched:** `scripts/audit-tarball.mjs`

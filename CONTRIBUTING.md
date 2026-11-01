@@ -56,15 +56,21 @@ node scripts/preflight.mjs
 ```
 
 It builds, type-checks (`npm run lint` is `tsc --noEmit`), runs the tests
-and then the static checks: package manifest and tarball contents, package
+and then the other checks: package manifest and tarball contents, installing
+the packed tarball and using it (this one needs network access), package
 metadata, the leftover-token scan (`npm run scan:placeholders`), the
-self-dependency guard, the non-TTY connector default, the Claude-only
-wording guard and the workflow hardening check. A pull request is ready
+self-dependency guard, the Claude-only wording guard and the workflow hardening
+check. A pull request is ready
 when preflight ends with `preflight: ALL PASS`.
 
 Also:
 
 - **Fixes come with a test** that fails before the fix and passes after it.
+- **Test what happens, not what the source says.** Prefer running the built CLI
+  and checking what it saved, wrote or spawned. `helpers/fake-claude.ts` shows
+  what an agent really receives, and `interactive.test.ts` drives the prompts
+  through a real pseudo-terminal. Tests never touch your real config store:
+  `vitest.config.ts` points the store's default location at a sandbox.
 - **Add a line to `CHANGELOG.md`** under `## [Unreleased]` for anything a
   user would notice.
 - **Keep docs honest.** If the README or `docs/` describe behaviour you

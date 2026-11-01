@@ -41,9 +41,11 @@ jobs:
       - name: Preflight from a path with a space and an accent
         shell: bash
         run: |
-          spaced="$RUNNER_TEMP/spaced path ação"
-          mkdir -p "$spaced"
-          git archive HEAD | tar -x -C "$spaced"
-          cd "$spaced"
+          # A relative path: tar reads the colon in D:\a as a remote host.
+          repo="$PWD"
+          cd "$RUNNER_TEMP"
+          mkdir "spaced path ação"
+          git -C "$repo" archive HEAD | tar -x -C "spaced path ação"
+          cd "spaced path ação"
           npm ci
           node scripts/preflight.mjs

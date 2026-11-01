@@ -1,14 +1,48 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   filterChildEnv,
   CHILD_ENV_ALLOWLIST,
+  parseCmdShimTarget,
 } from "../lib/swarm/agent-spawner.js";
+import { NPM_SHIM_EXE, NPM_SHIM_JS } from "./helpers/fake-claude.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SPAWNER_SRC = path.resolve(__dirname, "..", "lib", "swarm", "agent-spawner.ts");
+
+/** The source without comments, so a comment cannot satisfy a code check. */
+function spawnerCode(): string {
+  return fs
+    .readFileSync(SPAWNER_SRC, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+}
+
+describe("parseCmdShimTarget", () => {
+  it("finds the program in both shapes npm writes", () => {
+    expect(parseCmdShimTarget(NPM_SHIM_EXE)).toBe(
+      "node_modules\\@anthropic-ai\\claude-code\\bin\\claude.exe"
+    );
+    expect(parseCmdShimTarget(NPM_SHIM_JS)).toBe(
+      "node_modules\\@anthropic-ai\\claude-code\\cli.js"
+    );
+  });
+
+  it("does not take the node.exe check in the js shape for the program", () => {
+    expect(parseCmdShimTarget(NPM_SHIM_JS)).not.toMatch(/node\.exe/);
+  });
+
+  it.each([
+    ["a batch file someone wrote", '@echo off\r\nC:\\tools\\claude.exe %*\r\n'],
+    ["an empty file", ""],
+    ["a target with no argument forwarding", '"%dp0%\\x\\claude.exe"\r\n'],
+  ])("refuses %s", (_label, text) => {
+    expect(parseCmdShimTarget(text)).toBeNull();
+  });
+});
 
 describe("agent-spawner — env filtering", () => {
   it("passes through only allowlisted env vars", () => {
@@ -31,34 +65,82 @@ describe("agent-spawner — env filtering", () => {
     expect(filtered.SOMETHING_ELSE).toBeUndefined();
   });
 
-  it("allowlist is deliberately short (tokens stay on the parent)", () => {
-    // Ledger row 7 — this asserts the list hasn't silently grown.
-    // Updating this count requires a conscious review of what the child gets.
-    expect(CHILD_ENV_ALLOWLIST.length).toBe(11);
+  it("the allowlist is exactly these names (tokens stay on the parent)", () => {
+    // Ledger row 7. A size check let GH_TOKEN swap in for TERM unnoticed.
+    // Changing this list requires a conscious review of what the child gets.
+    expect([...CHILD_ENV_ALLOWLIST]).toEqual([
+      "PATH",
+      "HOME",
+      "USERPROFILE",
+      "TMPDIR",
+      "TMP",
+      "TEMP",
+      "LANG",
+      "LC_ALL",
+      "TERM",
+      "CLAUDE_CODE_OAUTH_TOKEN",
+      "CLAUDE_CONFIG_DIR",
+    ]);
   });
 });
 
 describe("agent-spawner — argv-array only (anti-injection)", () => {
-  it("source file does not invoke spawn with shell:true", () => {
-    const src = fs.readFileSync(SPAWNER_SRC, "utf8");
-    // The real guarantee is the spawn() call's `shell: false` — grep for
-    // any accidental `shell: true` that would re-enable interpolation.
-    expect(src).not.toMatch(/shell\s*:\s*true/);
-    expect(src).toMatch(/shell\s*:\s*false/);
+  // What the child really gets is asserted in swarm-live.test.ts. These only
+  // catch the shapes that behaviour test could miss on one platform.
+  it("source code never asks for a shell", () => {
+    const code = spawnerCode();
+    expect(code).toMatch(/shell\s*:\s*false/);
+    expect(code.match(/shell\s*:/g)).toHaveLength(1);
   });
 
   it("source file does not concatenate argv into a shell string", () => {
-    // Forbidden shapes: argv.join, ${argv}, exec(... + ...)
-    const src = fs.readFileSync(SPAWNER_SRC, "utf8");
-    expect(src).not.toMatch(/\bargv\.join\b/);
-    expect(src).not.toMatch(/\bexec\s*\(/); // child_process.exec takes a shell string
-    expect(src).not.toMatch(/execSync\s*\(/);
+    const code = spawnerCode();
+    expect(code).not.toMatch(/\bargv\.join\b/);
+    expect(code).not.toMatch(/\bexec\s*\(/); // child_process.exec takes a shell string
+    expect(code).not.toMatch(/execSync\s*\(/);
   });
 
-  it("source file calls spawn with (bin, argv, options) — three args", () => {
-    const src = fs.readFileSync(SPAWNER_SRC, "utf8");
-    // Must contain `spawn(bin, argv,` — the critical positional form.
-    expect(src).toMatch(/spawn\s*\(\s*bin\s*,\s*argv\s*,/);
+  it("refuses an argv the audit rejects, without spawning anything", async () => {
+    const { spawnClaudeAgent } = await import("../lib/swarm/agent-spawner.js");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pz-spawn-"));
+    const marker = path.join(dir, "ran.txt");
+    const prompt = path.join(dir, "p.md");
+    fs.writeFileSync(prompt, "x");
+    try {
+      expect(() =>
+        spawnClaudeAgent({
+          // If the audit were skipped this would really run and leave a marker.
+          bin: process.execPath,
+          argv: ["-e", `require("fs").writeFileSync(${JSON.stringify(marker)}, "x") && 1`],
+          cwd: dir,
+          promptFile: prompt,
+        })
+      ).toThrow(/refusing to spawn/);
+      await new Promise((r) => setTimeout(r, 500));
+      expect(fs.existsSync(marker)).toBe(false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+    }
+  });
+
+  it("does not start a child when the prompt cannot be read", async () => {
+    const { spawnClaudeAgent } = await import("../lib/swarm/agent-spawner.js");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pz-spawn-"));
+    const marker = path.join(dir, "ran.txt");
+    try {
+      expect(() =>
+        spawnClaudeAgent({
+          bin: process.execPath,
+          argv: ["-e", `require("fs").writeFileSync(${JSON.stringify(marker)}, "x")`],
+          cwd: dir,
+          promptFile: path.join(dir, "missing.md"),
+        })
+      ).toThrow(/ENOENT/);
+      await new Promise((r) => setTimeout(r, 500));
+      expect(fs.existsSync(marker)).toBe(false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+    }
   });
 });
 
@@ -67,13 +149,8 @@ describe("agent-spawner — missing-binary behavior (ENOENT)", () => {
     // Locks the invariant swarm --live depends on: spawn emits 'error'
     // (not a sync throw) when the binary is missing.
     const { spawnClaudeAgent } = await import("../lib/swarm/agent-spawner.js");
-    const tmpPrompt = path.join(
-      path.dirname(SPAWNER_SRC),
-      "..",
-      "..",
-      "__tests__",
-      "fixtures-missing-prompt.txt"
-    );
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pz-spawn-"));
+    const tmpPrompt = path.join(tmpDir, "prompt.md");
     fs.writeFileSync(tmpPrompt, "irrelevant\n");
     try {
       const { proc } = spawnClaudeAgent({
@@ -97,11 +174,7 @@ describe("agent-spawner — missing-binary behavior (ENOENT)", () => {
       expect(result.event).toBe("error");
       expect(result.err).toMatch(/ENOENT/);
     } finally {
-      try {
-        fs.rmSync(tmpPrompt);
-      } catch {
-        /* best effort */
-      }
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 3 });
     }
   }, 10000);
 });

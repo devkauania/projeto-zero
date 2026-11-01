@@ -63,7 +63,10 @@ export interface SafetyEnvelopeInput {
   /** Tool allowlist override. Empty array = use safe default. */
   allowedTools?: string[];
 
-  /** Tool denylist override. Empty array = use safe default. */
+  /**
+   * Tool denylist override. Empty array = use safe default. In verify mode the
+   * rules are added to the default instead, so a caller cannot widen a review.
+   */
   disallowedTools?: string[];
 
   /** Max conversational turns per agent. Default: 20. */
@@ -184,6 +187,12 @@ export const VERIFY_ALLOWED_TOOLS = Object.freeze([
   "Bash(git diff:*)",
 ]);
 
+/**
+ * Added to the deny list in verify mode. `git diff` is allowed there, and
+ * `git diff --output=<file>` writes that file.
+ */
+export const VERIFY_DISALLOWED_TOOLS = Object.freeze(["Bash(git diff --output:*)"]);
+
 const SESSION_ID_RE = /^[a-f0-9-]{8,64}$/i;
 
 /**
@@ -245,10 +254,13 @@ export function buildClaudeArgv(input: SafetyEnvelopeInput): BuiltEnvelope {
         ? [...input.allowedTools]
         : [...DEFAULT_ALLOWED_TOOLS];
 
+  const callerDeny = input.disallowedTools ?? [];
   const disallowedTools =
-    input.disallowedTools && input.disallowedTools.length > 0
-      ? [...input.disallowedTools]
-      : [...DEFAULT_DISALLOWED_TOOLS];
+    input.mode === "verify"
+      ? [...new Set([...DEFAULT_DISALLOWED_TOOLS, ...VERIFY_DISALLOWED_TOOLS, ...callerDeny])]
+      : callerDeny.length > 0
+        ? [...callerDeny]
+        : [...DEFAULT_DISALLOWED_TOOLS];
 
   const maxTurns =
     typeof input.maxTurns === "number" && input.maxTurns > 0
@@ -306,20 +318,27 @@ export function buildClaudeArgv(input: SafetyEnvelopeInput): BuiltEnvelope {
  * Used by the CLI to double-check envelopes before spawning.
  */
 export function auditArgv(argv: readonly string[]): string | null {
+  let bypass = false;
   for (let i = 0; i < argv.length; i++) {
     const tok = argv[i];
     if (tok === "--permission-mode" && argv[i + 1] === "bypassPermissions") {
-      // By the time we get here, buildClaudeArgv already enforced the
-      // iUnderstand gate — so seeing this pair in `auditArgv` means the
-      // caller went through the gate. Still, we surface it for logging.
-      return "permissionMode=bypassPermissions (gated by --i-understand)";
+      bypass = true;
     }
     // Shell-metacharacter heuristic on each argv token. Real shells are not
     // invoked (spawn({shell:false}) is required), but a surprise
-    // interpolation upstream would still be visible here.
+    // interpolation upstream would still be visible here. Every token is
+    // checked: the bypass case below must not skip this in the riskiest mode.
     if (typeof tok === "string" && /[`$]|(\|\|)|&&|;(?!$)/.test(tok)) {
       return `suspicious shell metacharacter in argv[${i}]: "${tok}"`;
     }
   }
-  return null;
+  // By the time we get here, buildClaudeArgv already enforced the iUnderstand
+  // gate, so seeing this pair means the caller went through it. Surfaced for
+  // logging; isBlockingAudit() does not treat it as a refusal.
+  return bypass ? "permissionMode=bypassPermissions (gated by --i-understand)" : null;
+}
+
+/** True when an auditArgv result means the argv must not be used. */
+export function isBlockingAudit(issue: string | null): boolean {
+  return issue !== null && !issue.startsWith("permissionMode=bypassPermissions");
 }

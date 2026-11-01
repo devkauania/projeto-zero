@@ -7,14 +7,14 @@
 //      child-process env),
 //   4. Streams the prompt body to stdin rather than onto argv.
 //
-// Anti-gaming test (swarm.spawner.test.ts) greps this file for
-// `.join(...argv...)`-shaped shell concatenation and fails if found. The
-// test is a last-line check; the primary control is the API shape — the
-// function signature does not expose a way to pass a shell string.
+// swarm-live.test.ts checks all of this on what a fake `claude` really receives.
+// The primary control is the API shape: the function signature does not expose
+// a way to pass a shell string.
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { auditArgv } from "./safety-envelope.js";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { auditArgv, isBlockingAudit } from "./safety-envelope.js";
 
 /**
  * Env vars the child `claude` process is allowed to inherit. Everything else
@@ -54,6 +54,11 @@ export interface SpawnAgentOptions {
 export interface SpawnedAgent {
   pid: number | undefined;
   proc: ChildProcess;
+  /**
+   * Set if the prompt could not be written to the child's stdin, typically
+   * because it exited without reading it. Valid once `proc` has closed.
+   */
+  promptError?: Error;
 }
 
 /**
@@ -70,6 +75,77 @@ export function filterChildEnv(
   return out;
 }
 
+export interface ResolvedCommand {
+  bin: string;
+  argv: string[];
+}
+
+/**
+ * The program a Windows .cmd shim written by npm starts, relative to the shim's
+ * folder, or null if the file is not in that shape. Both shapes end in the quoted
+ * target followed by %*, the arguments being forwarded:
+ *   "%dp0%\node_modules\...\bin\claude.exe"   %*
+ *   "%_prog%"  "%dp0%\node_modules\...\cli.js" %*
+ */
+export function parseCmdShimTarget(text: string): string | null {
+  const m = text.match(/"%~?dp0%?[\\/]([^"\r\n]+)"[ \t]+%\*/i);
+  return m ? m[1] : null;
+}
+
+function envPath(env: NodeJS.ProcessEnv): string {
+  // A plain object is case-sensitive, and Windows spells this "Path".
+  for (const [k, v] of Object.entries(env)) {
+    if (k.toUpperCase() === "PATH" && typeof v === "string") return v;
+  }
+  return "";
+}
+
+/**
+ * Turn the `claude` name into a program and argv that spawn can run with no
+ * shell. Only Windows needs work, for two reasons:
+ *  - spawn cannot run a .cmd without cmd.exe, which would re-parse argv, and an
+ *    npm global install is only a .cmd on PATH. So the shim is read and the
+ *    program it points at is started directly.
+ *  - with a bare name, spawn looks in the child's cwd before PATH. The cwd is a
+ *    checkout of whatever repo the swarm runs on, so a claude.exe committed there
+ *    would run. PATH is searched here instead, absolute entries only.
+ */
+export function resolveAgentCommand(
+  bin: string,
+  argv: string[],
+  env: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform = process.platform
+): ResolvedCommand {
+  if (platform !== "win32") return { bin, argv };
+  if (/[\\/]/.test(bin)) return { bin, argv };
+
+  for (const raw of envPath(env).split(";")) {
+    const dir = raw.trim().replace(/^"(.*)"$/, "$1");
+    if (!path.isAbsolute(dir)) continue;
+    // cmd.exe's own order for the default PATHEXT.
+    for (const ext of [".com", ".exe", ".bat", ".cmd"]) {
+      const candidate = path.join(dir, bin + ext);
+      if (!existsSync(candidate)) continue;
+      if (ext === ".com" || ext === ".exe") return { bin: candidate, argv };
+      return resolveBatchShim(candidate, argv);
+    }
+  }
+  throw new Error(`spawn ${bin} ENOENT: not found on PATH`);
+}
+
+function resolveBatchShim(file: string, argv: string[]): ResolvedCommand {
+  const target = parseCmdShimTarget(readFileSync(file, "utf8"));
+  const full = target ? path.join(path.dirname(file), target) : null;
+  if (full && existsSync(full)) {
+    if (/\.(?:exe|com)$/i.test(full)) return { bin: full, argv };
+    if (/\.[cm]?js$/i.test(full)) return { bin: process.execPath, argv: [full, ...argv] };
+  }
+  throw new Error(
+    `${file} is a batch file and its target could not be read, so it cannot be run without a shell. ` +
+      "A shell would re-parse the agent's arguments. Put claude.exe on PATH instead."
+  );
+}
+
 /**
  * Spawn a Claude agent. argv is passed as-is; no shell is invoked; prompt
  * body is piped in via stdin (never placed on argv).
@@ -82,14 +158,18 @@ export function spawnClaudeAgent(opts: SpawnAgentOptions): SpawnedAgent {
   }
   // Paranoia: audit the envelope one more time before spawning.
   const issue = auditArgv(argv);
-  if (issue && !issue.startsWith("permissionMode=bypassPermissions")) {
+  if (isBlockingAudit(issue)) {
     // The bypass case is allowed iff the safety envelope gate passed.
     throw new Error(`agent-spawner: refusing to spawn — ${issue}`);
   }
 
-  const childEnv = filterChildEnv(env);
+  // Read first: an unreadable prompt must not leave a child already running.
+  const body = readFileSync(promptFile, "utf8");
 
-  const proc = spawn(bin, argv, {
+  const childEnv = filterChildEnv(env);
+  const command = resolveAgentCommand(bin, argv, env);
+
+  const proc = spawn(command.bin, command.argv, {
     cwd,
     env: childEnv,
     shell: false, // CRITICAL: never invoke a shell. argv is taken literally.
@@ -97,22 +177,19 @@ export function spawnClaudeAgent(opts: SpawnAgentOptions): SpawnedAgent {
     windowsHide: true,
   });
 
-  // Stream the prompt body into stdin and close. Reading the whole file is
-  // fine — prompts are typically <10 KB.
-  try {
-    const body = readFileSync(promptFile, "utf8");
-    if (proc.stdin) {
-      proc.stdin.write(body);
-      proc.stdin.end();
-    }
-  } catch (err) {
-    try {
-      proc.kill("SIGTERM");
-    } catch {
-      /* ignore */
-    }
-    throw err;
+  const agent: SpawnedAgent = { pid: proc.pid, proc };
+
+  // Stream the prompt body into stdin and close. A child can exit without
+  // reading it, and for a prompt larger than the pipe buffer that surfaces as
+  // an 'error' on this stream. With no listener Node would turn it into an
+  // uncaught exception and take the launcher and every sibling agent down.
+  if (proc.stdin) {
+    proc.stdin.on("error", (err: Error) => {
+      agent.promptError = err;
+    });
+    proc.stdin.write(body);
+    proc.stdin.end();
   }
 
-  return { pid: proc.pid, proc };
+  return agent;
 }

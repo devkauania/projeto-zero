@@ -13,6 +13,17 @@ const CLI_ENTRY = path.resolve(here, "..", "..", "dist", "index.js");
 // 5.00 USD cap per agent, ten times what the operator asked for, and
 // `--max-turns 1.5` reached Claude Code as a non-integer.
 
+describe("parseMaxBudgetUsd at the size where toFixed stops printing digits", () => {
+  it("refuses a value that would reach Claude Code in exponent form", () => {
+    expect((1e21).toFixed(2)).toMatch(/e\+/);
+    expect(() => parseMaxBudgetUsd("1000000000000000000000")).toThrow(/--max-budget-usd/);
+  });
+
+  it("does not put a ceiling on an amount the operator wrote out", () => {
+    expect(parseMaxBudgetUsd("999999")).toBe(999999);
+  });
+});
+
 describe("parseMaxBudgetUsd", () => {
   it("returns undefined when the flag is absent (default applies later)", () => {
     expect(parseMaxBudgetUsd(undefined)).toBeUndefined();

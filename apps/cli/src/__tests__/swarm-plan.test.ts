@@ -142,6 +142,65 @@ describe("buildSwarmPlan", () => {
   });
 });
 
+describe("buildSwarmPlan — the limits reach every agent's argv", () => {
+  const plan = (extra: Record<string, unknown> = {}) =>
+    buildSwarmPlan({
+      count: 2,
+      mode: "work",
+      prompts: prompts(2),
+      sessionPrefix: "test",
+      repoRoot: FIXTURE_ROOT,
+      ...extra,
+    });
+  const after = (argv: string[], flag: string) => argv[argv.indexOf(flag) + 1];
+
+  it("forwards --max-budget-usd and --max-turns with their real values", () => {
+    for (const a of plan({ maxBudgetUsd: 0.5, maxTurns: 3 }).agents) {
+      expect(after(a.argv, "--max-budget-usd")).toBe("0.50");
+      expect(after(a.argv, "--max-turns")).toBe("3");
+    }
+  });
+
+  it("forwards the caller's allow and deny lists", () => {
+    const [a] = plan({ allowedTools: ["Read"], disallowedTools: ["Bash(sudo:*)", "WebFetch"] }).agents;
+    expect(a.argv.slice(a.argv.indexOf("--allowed-tools") + 1, a.argv.indexOf("--disallowed-tools"))).toEqual(["Read"]);
+    expect(a.argv.slice(a.argv.indexOf("--disallowed-tools") + 1, a.argv.indexOf("--max-turns"))).toEqual([
+      "Bash(sudo:*)",
+      "WebFetch",
+    ]);
+  });
+
+  it("the default deny list is on argv, not only in the effective values", () => {
+    const [a] = plan().agents;
+    const denied = a.argv.slice(a.argv.indexOf("--disallowed-tools") + 1, a.argv.indexOf("--max-turns"));
+    expect(denied).toEqual(["Bash(rm:*)", "Bash(curl:*)", "Bash(wget:*)", "Bash(ssh:*)", "WebFetch", "WebSearch"]);
+  });
+
+  it("carries the bypass gate through to argv only with the acknowledgement", () => {
+    const off = plan({ permissionMode: "bypassPermissions" }).agents[0].argv;
+    const on = plan({ permissionMode: "bypassPermissions", iUnderstand: true }).agents[0].argv;
+    expect(after(off, "--permission-mode")).toBe("acceptEdits");
+    expect(after(on, "--permission-mode")).toBe("bypassPermissions");
+  });
+
+  it("refuses at plan time a rule the spawner would refuse later", () => {
+    expect(() => plan({ allowedTools: ["Bash(a && b)"] })).toThrow(/metacharacter/);
+    expect(() =>
+      plan({
+        allowedTools: ["Bash(a && b)"],
+        permissionMode: "bypassPermissions",
+        iUnderstand: true,
+      })
+    ).toThrow(/metacharacter/);
+  });
+
+  it("a long prefix never pushes out the timestamp or the 32-character limit", () => {
+    const p = plan({ sessionPrefix: "x".repeat(32) });
+    expect(p.id.length).toBeLessThanOrEqual(32);
+    expect(p.id).toMatch(/^x+-\d{14}$/);
+  });
+});
+
 describe("renderPlan — deterministic output", () => {
   it("renders every documented field", () => {
     const plan = buildSwarmPlan({

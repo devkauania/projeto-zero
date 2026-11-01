@@ -12,7 +12,9 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { theme } from "../lib/theme.js";
 import {
+  auditArgv,
   buildClaudeArgv,
+  isBlockingAudit,
   type PermissionMode,
   type SwarmMode,
 } from "../lib/swarm/safety-envelope.js";
@@ -21,9 +23,9 @@ import {
   type PromptDescriptor,
 } from "../lib/swarm/prompt-browser.js";
 import {
+  assertCanCreateWorktrees,
   worktreePathFor,
-  createWorktree,
-  type WorktreeHandle,
+  createWorktrees,
 } from "../lib/swarm/worktree-manager.js";
 import { spawnClaudeAgent } from "../lib/swarm/agent-spawner.js";
 import { superviseAgent } from "../lib/swarm/agent-outcome.js";
@@ -46,7 +48,8 @@ export interface SwarmPlan {
 function parseCount(raw: string | undefined, fallback = 1): number {
   if (raw === undefined) return fallback;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < 1 || n > 15) {
+  // Digits only: Number() also takes "0x2" and "1e1".
+  if (!/^\d+$/.test(raw.trim()) || !Number.isInteger(n) || n < 1 || n > 15) {
     throw new Error(
       `swarm: --count must be an integer in [1,15], got "${raw}"`
     );
@@ -80,7 +83,9 @@ function parsePermissionMode(
 export function parseMaxTurns(raw: string | undefined): number | undefined {
   if (raw === undefined) return undefined;
   const n = Number(raw.trim());
-  if (raw.trim() === "" || !Number.isInteger(n) || n < 1) {
+  // Digits only: Number() also takes "0x10" and "1e21", which would reach
+  // Claude Code as "16" and "1e+21".
+  if (!/^\d+$/.test(raw.trim()) || !Number.isSafeInteger(n) || n < 1) {
     throw new Error(
       `swarm: --max-turns must be a whole number >= 1, got "${raw}"`
     );
@@ -98,7 +103,9 @@ export function parseMaxBudgetUsd(raw: string | undefined): number | undefined {
   if (raw === undefined) return undefined;
   const trimmed = raw.trim();
   const n = Number(trimmed);
-  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed) || !Number.isFinite(n) || n < 0.01) {
+  // The upper bound is only where toFixed() stops printing digits ("1e+21"), not
+  // a judgement on the amount: how much to allow is the operator's call.
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed) || !(n >= 0.01 && n <= Number.MAX_SAFE_INTEGER)) {
     throw new Error(
       `swarm: --max-budget-usd must be a number >= 0.01 with a dot as decimal separator (e.g. 0.50), got "${raw}"`
     );
@@ -120,8 +127,10 @@ function makeSwarmId(prefix: string | undefined): string {
     .toISOString()
     .replace(/[^0-9]/g, "")
     .slice(0, 14);
-  // Keep the id within the [a-zA-Z0-9_-]{1,32} name regex.
-  return `${base}-${ts}`.slice(0, 32);
+  // Keep the id within the [a-zA-Z0-9_-]{1,32} name regex by shortening the
+  // prefix. The timestamp has to survive: it is what makes a second run's
+  // swarm/<id>/* branches differ from the first's.
+  return `${base.slice(0, 32 - ts.length - 1)}-${ts}`;
 }
 
 /**
@@ -184,6 +193,13 @@ export function buildSwarmPlan(args: {
       maxTurns,
       maxBudgetUsd,
     });
+
+    // Checked here so a dry run and a live run agree, and a refused rule stops
+    // before any worktree exists rather than after.
+    const issue = auditArgv(built.argv);
+    if (isBlockingAudit(issue)) {
+      throw new Error(`swarm: refusing this plan — ${issue}`);
+    }
 
     agents.push({
       index: i,
@@ -280,6 +296,17 @@ export const swarmCommand = new Command("swarm")
 
       const rendered = renderPlan(plan);
 
+      const unassigned = prompts.slice(count);
+      if (unassigned.length > 0) {
+        console.error(
+          theme.warning(
+            `Warning: ${unassigned.length} of ${prompts.length} prompts will not run, not assigned to any agent: ` +
+              `${unassigned.map((u) => `${u.id}${path.extname(u.path)}`).join(", ")}. ` +
+              `Pass --count ${prompts.length} to run them all.`
+          )
+        );
+      }
+
       // --dry-run is the default-safe path. --live is required to actually
       // spawn. If neither flag is set we behave like --dry-run but also
       // emit a hint so users know how to go live.
@@ -301,11 +328,8 @@ export const swarmCommand = new Command("swarm")
       console.log(pc.bold(theme.brand("Launching swarm (live)...")));
       console.log(rendered);
 
-      const handles: WorktreeHandle[] = [];
-      for (const a of plan.agents) {
-        const h = createWorktree(plan.id, a.index, {});
-        handles.push(h);
-      }
+      assertCanCreateWorktrees();
+      createWorktrees(plan.id, plan.agents.map((a) => a.index));
 
       // Spawn every agent, then supervise each until its stdio closes. An
       // agent only succeeds when it exits 0, its stdout is valid stream-json
@@ -313,23 +337,31 @@ export const swarmCommand = new Command("swarm")
       const outcomes = await Promise.all(
         plan.agents.map((a) => {
           const tag = theme.brand(`[agent-${a.index}]`);
-          let proc;
+          let agent;
           try {
-            proc = spawnClaudeAgent({
+            agent = spawnClaudeAgent({
               argv: a.argv,
               cwd: a.worktreePath,
               promptFile: a.prompt.path,
-            }).proc;
+            });
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             return Promise.resolve({ ok: false, reason: `spawn refused: ${msg}` });
           }
-          proc.stderr?.on("data", (buf: Buffer) => {
+          const spawned = agent;
+          spawned.proc.stderr?.on("data", (buf: Buffer) => {
             for (const line of buf.toString("utf8").split(/\r?\n/)) {
               if (line.length > 0) console.error(`${tag} ${theme.warning(line)}`);
             }
           });
-          return superviseAgent(proc, (line) => console.log(`${tag} ${line}`));
+          return superviseAgent(spawned.proc, (line) => console.log(`${tag} ${line}`)).then(
+            (outcome) =>
+              // The agent cannot have done the task if it never got the prompt,
+              // whatever it says about itself.
+              outcome.ok && spawned.promptError
+                ? { ok: false, reason: `prompt not delivered: ${spawned.promptError.message}` }
+                : outcome
+          );
         })
       );
 
@@ -352,7 +384,10 @@ export const swarmCommand = new Command("swarm")
               `Worktrees and swarm/${plan.id}/* branches are kept under .claude/worktrees/${plan.id}/ for inspection.`
           )
         );
-        process.exit(1);
+        // exitCode, not exit(): stdout is asynchronous on Windows pipes, and
+        // exit() can cut off the per-agent lines a script is reading.
+        process.exitCode = 1;
+        return;
       }
 
       console.log(
@@ -365,6 +400,6 @@ export const swarmCommand = new Command("swarm")
       // The parsers already prefix their messages with "swarm:".
       const line = msg.startsWith("swarm:") ? msg : `swarm: ${msg}`;
       console.error(theme.warning(line));
-      process.exit(1);
+      process.exitCode = 1;
     }
   });

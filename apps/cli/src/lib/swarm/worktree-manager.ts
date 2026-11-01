@@ -10,7 +10,7 @@
 //     rejected.
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, rmdirSync } from "node:fs";
 import path from "node:path";
 
 const NAME_RE = /^[a-zA-Z0-9_-]{1,32}$/;
@@ -66,6 +66,24 @@ function resolveRoot(opts: WorktreeManagerOptions | undefined): string {
 }
 
 /**
+ * Say plainly why worktrees cannot be made here, before any are attempted. A
+ * fresh `git init` otherwise fails with git's "fatal: invalid reference: HEAD".
+ */
+export function assertCanCreateWorktrees(opts: WorktreeManagerOptions = {}): void {
+  const repoRoot = resolveRoot(opts);
+  if (!runGit(["rev-parse", "--is-inside-work-tree"], repoRoot).ok) {
+    throw new Error(
+      `swarm: ${repoRoot} is not a git repository. --live gives each agent a git worktree: run "git init" and make a first commit.`
+    );
+  }
+  if (!runGit(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"], repoRoot).ok) {
+    throw new Error(
+      `swarm: this repository has no commits yet, so there is nothing to check out for the agents. Make a first commit: git add . && git commit -m "first commit"`
+    );
+  }
+}
+
+/**
  * Create a new worktree at the canonical location and return its handle.
  * Caller is responsible for cleanup via `removeWorktree` (or
  * `antigravity swarm clean` later).
@@ -113,6 +131,34 @@ export function createWorktree(
   }
 
   return { swarmId, agentIndex, path: wtPath, ref: branch };
+}
+
+/**
+ * Create one worktree per index, or none. A failure partway would otherwise leave
+ * the earlier ones and their branches behind with no agent ever having run in them.
+ */
+export function createWorktrees(
+  swarmId: string,
+  indexes: number[],
+  opts: WorktreeManagerOptions = {}
+): WorktreeHandle[] {
+  const repoRoot = resolveRoot(opts);
+  const handles: WorktreeHandle[] = [];
+  try {
+    for (const i of indexes) handles.push(createWorktree(swarmId, i, opts));
+    return handles;
+  } catch (err) {
+    for (const h of handles) {
+      removeWorktree(h, opts);
+      runGit(["branch", "-D", h.ref], repoRoot);
+    }
+    try {
+      rmdirSync(path.join(repoRoot, ".claude", "worktrees", swarmId));
+    } catch {
+      /* already gone, or something else lives there: not ours to remove */
+    }
+    throw err;
+  }
 }
 
 /**

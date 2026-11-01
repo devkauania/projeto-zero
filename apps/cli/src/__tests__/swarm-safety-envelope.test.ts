@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { spawnSync } from "node:child_process";
 import {
   buildClaudeArgv,
   auditArgv,
@@ -10,6 +11,7 @@ import {
   KNOWN_CLAUDE_TOOLS,
   PERMISSION_RULE_RE,
   VERIFY_ALLOWED_TOOLS,
+  type SafetyEnvelopeInput,
 } from "../lib/swarm/safety-envelope.js";
 
 const base = {
@@ -64,6 +66,22 @@ describe("safety-envelope — anti-gaming invariant", () => {
   });
 });
 
+describe("safety-envelope — verify mode's deny list", () => {
+  const denied = (input: Partial<SafetyEnvelopeInput>) =>
+    buildClaudeArgv({ ...base, mode: "verify", ...input }).effective.disallowedTools;
+
+  it("a caller's list adds to the defaults instead of replacing them", () => {
+    const list = denied({ disallowedTools: ["Read"] });
+    for (const rule of DEFAULT_DISALLOWED_TOOLS) expect(list).toContain(rule);
+    expect(list).toContain("Read");
+  });
+
+  it("work mode's caller list still replaces, as documented", () => {
+    const { effective } = buildClaudeArgv({ ...base, mode: "work", disallowedTools: ["Read"] });
+    expect(effective.disallowedTools).toEqual(["Read"]);
+  });
+});
+
 describe("safety-envelope — defaults", () => {
   it("applies the hardcoded safe defaults when caller omits options", () => {
     const built = buildClaudeArgv({ ...base, mode: "work" });
@@ -101,6 +119,24 @@ describe("safety-envelope — input validation", () => {
     ).toThrow(/invalid sessionId/);
   });
 
+  it.each([
+    ["a flag in front of a valid tail", "--evil a1b2c3d4"],
+    ["a valid head with something after it", "a1b2c3d4 --evil"],
+  ])("rejects a sessionId with %s", (_label, sessionId) => {
+    expect(() => buildClaudeArgv({ ...base, sessionId, mode: "work" })).toThrow(/invalid sessionId/);
+  });
+
+  it("an empty deny list keeps the default: it cannot switch the deny list off", () => {
+    const built = buildClaudeArgv({ ...base, mode: "work", disallowedTools: [] });
+    expect(built.effective.disallowedTools).toEqual([...DEFAULT_DISALLOWED_TOOLS]);
+    expect(built.argv).toContain("Bash(rm:*)");
+  });
+
+  it("an empty allow list keeps the default", () => {
+    const built = buildClaudeArgv({ ...base, mode: "work", allowedTools: [] });
+    expect(built.effective.allowedTools).toEqual([...DEFAULT_ALLOWED_TOOLS]);
+  });
+
   it("rejects missing workingDir", () => {
     expect(() =>
       buildClaudeArgv({ ...base, workingDir: "", mode: "work" })
@@ -127,9 +163,16 @@ describe("safety-envelope — input validation", () => {
 });
 
 describe("auditArgv", () => {
-  it("flags shell metacharacters in argv tokens", () => {
-    const argv = ["--session-id", "x; rm -rf /"];
-    expect(auditArgv(argv)).toMatch(/suspicious shell metacharacter/);
+  it.each(["x; rm -rf /", "a && b", "a || b", "`id`", "$HOME", "$(id)"])(
+    "flags the shell metacharacters in %j",
+    (tok) => {
+      expect(auditArgv(["--session-id", tok])).toMatch(/suspicious shell metacharacter/);
+    }
+  );
+
+  it("a metacharacter after the bypass pair is still flagged", () => {
+    const msg = auditArgv(["--permission-mode", "bypassPermissions", "--allowed-tools", "Bash(a && b)"]);
+    expect(msg).toMatch(/suspicious shell metacharacter/);
   });
 
   it("allows clean argv from buildClaudeArgv", () => {
@@ -159,13 +202,39 @@ describe("safety-envelope — Claude Code CLI contract (regression: invalid flag
     { mode: "work" as const, permissionMode: "bypassPermissions" as const, iUnderstand: true },
   ];
 
-  it("emits only flags recorded from the real Claude Code CLI", () => {
+  // Checked by hand against `claude --help` of Claude Code 2.1.310 and the CLI
+  // reference. A literal on purpose: comparing against the source's own list
+  // passes when a made-up flag is added to both.
+  const VERIFIED_FLAGS = [
+    "-p",
+    "--verbose",
+    "--output-format",
+    "--permission-mode",
+    "--allowed-tools",
+    "--disallowed-tools",
+    "--max-turns",
+    "--max-budget-usd",
+    "--session-id",
+  ];
+
+  it("emits exactly the flags verified against the real Claude Code CLI", () => {
     for (const m of modes) {
       const { argv } = buildClaudeArgv({ ...base, ...m });
-      const flags = argv.filter((t) => t.startsWith("-"));
-      for (const f of flags) {
-        expect(CLAUDE_CLI_FLAGS, `unknown flag ${f}`).toContain(f);
-      }
+      expect(argv.filter((t) => t.startsWith("-"))).toEqual(VERIFIED_FLAGS);
+    }
+  });
+
+  it("the source's flag list matches that verified list", () => {
+    expect([...CLAUDE_CLI_FLAGS].filter((f) => f !== "--print")).toEqual(VERIFIED_FLAGS);
+  });
+
+  // Runs only where Claude Code is installed. Nothing is sent anywhere: --help
+  // is local. This is what catches a flag Claude Code later removes.
+  const help = spawnSync("claude", ["--help"], { encoding: "utf8", timeout: 30000 });
+  it.runIf(help.status === 0)("every flag still appears in the installed claude --help", () => {
+    // --max-turns is print-mode only: documented in the reference, not in --help.
+    for (const f of VERIFIED_FLAGS.filter((x) => x !== "--max-turns")) {
+      expect(help.stdout, `claude --help no longer lists ${f}`).toContain(f);
     }
   });
 

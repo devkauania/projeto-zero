@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 import {
   StreamJsonMonitor,
   evaluateAgentOutcome,
@@ -65,6 +67,26 @@ describe("evaluateAgentOutcome", () => {
     expect(evaluateAgentOutcome(0, null, monitorOf(budget)).ok).toBe(false);
   });
 
+  it("subtype success with is_error true is a failure", () => {
+    // Claude Code reports some failures this way, an invalid API key among them.
+    const err = JSON.stringify({ type: "result", subtype: "success", is_error: true, result: "Invalid API key" });
+    const o = evaluateAgentOutcome(0, null, monitorOf(err));
+    expect(o.ok).toBe(false);
+    expect(o.reason).toMatch(/is_error=true/);
+  });
+
+  it("a later error result overrides an earlier success", () => {
+    const err = JSON.stringify({ type: "result", subtype: "error_during_execution", is_error: true });
+    const o = evaluateAgentOutcome(0, null, monitorOf(OK_RESULT, err));
+    expect(o.ok).toBe(false);
+    expect(o.reason).toMatch(/error_during_execution/);
+  });
+
+  it("a result without subtype is a failure", () => {
+    const o = evaluateAgentOutcome(0, null, monitorOf(JSON.stringify({ type: "result", is_error: false })));
+    expect(o.ok).toBe(false);
+  });
+
   it("exit 0 + valid stream-json + success result is a success", () => {
     const o = evaluateAgentOutcome(
       0,
@@ -91,6 +113,22 @@ describe("StreamJsonMonitor", () => {
     m.push(OK_RESULT);
     expect(m.end()).toEqual([OK_RESULT]);
     expect(m.result).toBeDefined();
+  });
+});
+
+describe("superviseAgent waits for the output, not for the exit", () => {
+  it("counts a result that arrives after the process has exited", async () => {
+    // A child's exit can overtake the last of its stdout, or a grandchild can
+    // still hold the pipe. Node reports that as exit, then data, then close.
+    const proc = new EventEmitter() as EventEmitter & { stdout: PassThrough };
+    proc.stdout = new PassThrough();
+    const outcome = superviseAgent(proc as unknown as ChildProcess);
+    proc.emit("exit", 0, null);
+    await new Promise((r) => setTimeout(r, 20));
+    proc.stdout.write(OK_RESULT + "\n");
+    await new Promise((r) => setTimeout(r, 20));
+    proc.emit("close", 0, null);
+    expect(await outcome).toEqual({ ok: true });
   });
 });
 
@@ -127,6 +165,40 @@ describe("superviseAgent — real child processes", () => {
     const o = await superviseAgent(proc, (l) => lines.push(l));
     expect(o).toEqual({ ok: true });
     expect(lines.length).toBe(2);
+  }, 15000);
+
+  it("a result written with no trailing newline still counts, and is forwarded", async () => {
+    const proc = child(`process.stdout.write(${JSON.stringify(OK_RESULT)})`);
+    const lines: string[] = [];
+    const o = await superviseAgent(proc, (l) => lines.push(l));
+    expect(o).toEqual({ ok: true });
+    expect(lines).toEqual([OK_RESULT]);
+  }, 15000);
+
+  it("a success followed by an error result → failure", async () => {
+    const err = JSON.stringify({ type: "result", subtype: "error_during_execution", is_error: true });
+    const proc = child(`console.log(${JSON.stringify(OK_RESULT)}); console.log(${JSON.stringify(err)});`);
+    const o = await superviseAgent(proc);
+    expect(o.ok).toBe(false);
+  }, 15000);
+
+  it("waits for stdout to drain: a result after a large stream is not missed", async () => {
+    // The process exits while most of this is still in the pipe, so deciding on
+    // "exit" instead of "close" reports that no result arrived.
+    const filler = JSON.stringify({ type: "assistant", text: "x".repeat(1000) });
+    const proc = child(
+      `const line = ${JSON.stringify(filler + "\n")}.repeat(4000);` +
+        `process.stdout.write(line + ${JSON.stringify(OK_RESULT + "\n")}, () => process.exit(0));`
+    );
+    const o = await superviseAgent(proc);
+    expect(o).toEqual({ ok: true });
+  }, 30000);
+
+  it("a child that exits non-zero after a success result → failure", async () => {
+    const proc = child(`console.log(${JSON.stringify(OK_RESULT)}); process.exitCode = 7;`);
+    const o = await superviseAgent(proc);
+    expect(o.ok).toBe(false);
+    expect(o.reason).toMatch(/code 7/);
   }, 15000);
 
   it("missing binary → failure (spawn error), never hangs", async () => {

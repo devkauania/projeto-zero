@@ -43,10 +43,12 @@
     "@clack/prompts": "^0.10.0",
     "commander": "^13.1.0",
     "conf": "^13.1.0",
+    "env-paths": "^3.0.0",
     "figlet": "^1.8.0",
     "picocolors": "^1.1.0"
   },
   "devDependencies": {
+    "@lydell/node-pty": "^1.1.0",
     "@types/figlet": "^1.7.0",
     "@types/node": "^22.15.0",
     "typescript": "^5.8.0",

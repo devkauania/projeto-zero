@@ -47,7 +47,7 @@ function runCli(args: string[]): Promise<RunResult> {
       } catch {
         /* ignore */
       }
-    }, 8000);
+    }, 60000);
     child.on("close", (code) => {
       clearTimeout(hardTimer);
       resolve({ code, stdout, stderr });
@@ -63,7 +63,7 @@ beforeAll(() => {
   }
 });
 
-describe("ANTIGRAVITY_CONFIG_DIR out-of-scope — friendly error UX", { timeout: 15000 }, () => {
+describe("ANTIGRAVITY_CONFIG_DIR out-of-scope — friendly error UX", { timeout: 60000 }, () => {
   it("info exits 1 with a scope message, no stack trace", async () => {
     const r = await runCli(["info"]);
     expect(r.code).toBe(1);

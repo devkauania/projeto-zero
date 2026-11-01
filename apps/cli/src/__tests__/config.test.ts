@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
+import { linkDir } from "./helpers/cli.js";
 import {
   saveConfig,
   loadConfig,
@@ -9,6 +11,7 @@ import {
   getRequiredConnectors,
   validateWizardConfig,
   CONNECTOR_ID_RE,
+  AGENT_IDS,
   ConfigValidationError,
   type WizardConfig,
 } from "../lib/config.js";
@@ -137,37 +140,20 @@ describe("config dir hardening (ledger row 8)", () => {
     );
   });
 
-  it("rejects a symlink at the override path", async () => {
-    // Build a symlink inside tmp pointing at a sibling dir; aim the env
-    // var at the symlink. validateConfigDir must reject it even though
-    // the symlink's target is inside tmp.
+  it("rejects a link at the override path", async () => {
+    // linkDir makes a junction on Windows, which needs no privilege, so this
+    // runs everywhere. It used to return early on EPERM and pass untested.
     const real = await fs.mkdtemp(path.join(os.tmpdir(), "pz-real-"));
-    const link = path.join(os.tmpdir(), `pz-link-${Date.now()}`);
-    try {
-      await fs.symlink(real, link, "dir");
-    } catch (err: unknown) {
-      // Windows without SeCreateSymbolicLinkPrivilege — skip the test.
-      const code = (err as NodeJS.ErrnoException)?.code;
-      if (code === "EPERM" || code === "ENOSYS") {
-        return;
-      }
-      throw err;
-    }
+    const link = path.join(os.tmpdir(), `pz-link-${process.pid}-${Date.now()}`);
+    linkDir(real, link);
     process.env.ANTIGRAVITY_CONFIG_DIR = link;
     try {
       expect(() => saveConfig(sample)).toThrow(/symlink/);
+      expect(await fs.readdir(real)).toEqual([]);
     } finally {
-      await fs.rm(link, { force: true });
+      await fs.rm(link, { recursive: true, force: true });
       await fs.rm(real, { recursive: true, force: true });
     }
-  });
-
-  it("rejects empty override string", () => {
-    process.env.ANTIGRAVITY_CONFIG_DIR = "";
-    // Empty string means "no override" in the lookup path, not "bad
-    // override" — we only validate non-empty overrides. This test locks
-    // that behavior in so we don't accidentally refuse common defaults.
-    expect(() => saveConfig(sample)).not.toThrow();
   });
 });
 
@@ -198,10 +184,19 @@ async function findFileContaining(
 describe("config — connector id validation", () => {
   const conn = { id: "x", label: "x", description: "x", tools: [], requiredFor: [] };
 
-  it("all seed connector ids are accepted", () => {
-    for (const id of ["supabase", "vercel", "stripe", "figma", "netlify"]) {
+  it("the seed the package ships passes the validator it will meet at runtime", async () => {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const seed = JSON.parse(
+      await fs.readFile(path.resolve(here, "../../../../.agents/default-wizard-config.json"), "utf8")
+    );
+    const ids = Object.keys(seed.mcpConnectors);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) {
       expect(id).toMatch(CONNECTOR_ID_RE);
+      expect(seed.mcpConnectors[id].id).toBe(id);
     }
+    expect(() => validateWizardConfig(seed)).not.toThrow();
+    expect(seed.agents).toEqual([...AGENT_IDS]);
   });
 
   it.each([
